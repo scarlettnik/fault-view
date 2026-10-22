@@ -1,0 +1,351 @@
+/* Live terminal: a quiet idle scene, then sequential rows and a progress sweep. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 41fr) minmax(0, 59fr);
+  gap: clamp(48px, 4.5vw, 72px);
+  align-items: center;
+  min-height: min(780px, calc(100svh - 76px));
+  padding-block: 64px 80px;
+}
+
+.hero h1 {
+  font-size: clamp(48px, 5.25vw, 76px);
+  letter-spacing: -0.055em;
+}
+
+.hero-label {
+  margin-bottom: 24px;
+}
+
+.hero-description {
+  max-width: 440px;
+  font-size: 17px;
+  margin-top: 26px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.terminal-scene {
+  min-width: 0;
+}
+
+.terminal {
+  position: relative;
+  width: 100%;
+  background: var(--terminal-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  font: 12px var(--font-mono);
+  outline-offset: 6px;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.terminal-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.file-name {
+  color: var(--text-subtle);
+  margin-left: 6px;
+}
+
+.terminal-state {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.terminal[data-state='preparing'] .status-dot,
+.terminal[data-state='running'] .status-dot {
+  background: var(--accent);
+}
+
+.terminal[data-state='completed'] .status-dot {
+  background: var(--error);
+}
+
+.terminal[data-verdict='pass'] .status-dot {
+  background: var(--success);
+}
+
+.terminal[data-verdict='warn'] .status-dot {
+  background: #e6c875;
+}
+
+.run-progress {
+  position: absolute;
+  top: 53px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.run-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 320ms var(--ease-standard);
+}
+
+.terminal[data-state='running'] .run-progress {
+  opacity: 1;
+}
+
+.demo-config {
+  padding: 16px 22px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.demo-config label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+
+.demo-config select {
+  width: 100%;
+  font-size: 11px;
+}
+
+.stage-list {
+  padding-block: 8px 12px;
+}
+
+.request-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 85px;
+  align-items: center;
+  min-height: 51px;
+  gap: 8px;
+  padding: 8px 22px;
+  transition: background-color var(--duration-fast);
+}
+
+.request-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleY(0.5);
+  transition:
+    transform 180ms,
+    opacity 180ms,
+    background-color 180ms;
+}
+
+.request-row.is-running {
+  background: rgb(243 245 247 / 3%);
+}
+
+.request-row.is-running::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.request-row.is-error::before {
+  background: var(--error);
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.stage-index {
+  color: var(--text-subtle);
+  font-size: 10px;
+}
+
+.stage-list strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.stage-list small {
+  display: block;
+  color: var(--text-subtle);
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.stage-list [data-stage-status] {
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stage-list .just-finished [data-stage-status] {
+  color: var(--accent);
+}
+
+.stage-list .is-error [data-stage-status] {
+  color: var(--error);
+}
+
+.terminal-detail {
+  border-top: 1px solid var(--line);
+}
+
+.terminal-detail .tablist {
+  width: 290px;
+  margin-inline: 22px;
+  border: 0;
+}
+
+.terminal-panel {
+  min-height: 142px;
+  padding: 20px 22px;
+  border-top: 1px solid var(--line);
+}
+
+.panel-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.025em;
+  color: var(--text-subtle);
+  margin-bottom: 10px;
+}
+
+.terminal-panel pre {
+  font-size: 12px;
+}
+
+.terminal-explanation {
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.terminal-network {
+  margin-top: 10px;
+  color: var(--text-subtle);
+  font-size: 10px !important;
+}
+
+.terminal-mini-app {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 96px;
+}
+
+.mini-app-bars {
+  display: flex;
+  gap: 5px;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.mini-app-bars i {
+  display: block;
+  width: 27px;
+  height: 48px;
+  background: #27352a;
+}
+
+.terminal-mini-app p {
+  font-size: 12px;
+}
+
+.terminal-mini-app[data-verdict='fail'] .mini-app-bars i {
+  background: #4a292b;
+}
+
+.terminal-mini-app[data-verdict='fail'] p {
+  color: var(--error);
+}
+
+.terminal-mini-app[data-verdict='warn'] .mini-app-bars i {
+  background: #46422d;
+}
+
+.terminal-mini-app[data-verdict='pass'] p {
+  color: var(--success);
+}
+
+.terminal-footer {
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 62px;
+  padding: 8px 16px 8px 22px;
+}
+
+.demo-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.terminal-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  min-height: 44px;
+  min-width: 76px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+
+.terminal-play:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.play-symbol {
+  font-size: 17px;
+}
+
+.terminal-result-link {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 22px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 11px;
+}

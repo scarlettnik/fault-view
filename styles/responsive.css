@@ -1,0 +1,945 @@
+@media (width >= 1440px) {
+  .container {
+    width: min(var(--content-width), calc(100% - 64px));
+  }
+}
+
+@media (width <= 1199px) {
+  .hero {
+    gap: 40px;
+    grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
+  }
+
+  .hero-actions {
+    gap: 10px;
+  }
+
+  .hero-actions .button {
+    padding-inline: 15px;
+    font-size: 13px;
+  }
+
+  .site-nav {
+    gap: 20px;
+  }
+
+  .heading-split,
+  .split-section {
+    gap: 40px;
+  }
+
+  .setup-workspace {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .dependency-graph {
+    padding-inline: 16px;
+    gap: 32px;
+  }
+
+  .route-node::after {
+    width: 16px;
+  }
+
+  .endpoint-nodes::before {
+    left: -17px;
+  }
+
+  .endpoint-nodes li::before {
+    width: 17px;
+    left: -18px;
+  }
+
+  .fault-story {
+    gap: 48px;
+  }
+
+  .fault-stage {
+    padding-top: 16px;
+    top: 90px;
+  }
+
+  .product-object {
+    height: 104px;
+  }
+
+  .team-benefits {
+    gap: 32px;
+  }
+}
+
+@media (width <= 1023px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+    padding-block: 64px 72px;
+    min-height: auto;
+  }
+
+  .hero-copy {
+    max-width: 680px;
+  }
+
+  .hero h1 {
+    font-size: clamp(50px, 8vw, 72px);
+  }
+
+  .hero-description {
+    max-width: 530px;
+  }
+
+  .terminal-scene {
+    max-width: 740px;
+    width: 100%;
+  }
+
+  .section {
+    padding-block: 72px;
+  }
+
+  .heading-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .heading-split > p {
+    max-width: 580px;
+  }
+
+  .problem-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 40px;
+  }
+
+  .problem-strip > a {
+    grid-column: 2;
+  }
+
+  .how-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 36px;
+  }
+
+  .how-step p {
+    min-height: 72px;
+  }
+
+  .split-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+
+  .section-copy > p:not(.eyebrow) {
+    max-width: 600px;
+  }
+
+  .dependency-scene,
+  .evidence-panel {
+    width: 100%;
+    max-width: 740px;
+  }
+
+  .dependency-graph {
+    gap: 56px;
+    padding: 32px;
+  }
+
+  .route-node::after {
+    width: 29px;
+  }
+
+  .endpoint-nodes::before {
+    left: -28px;
+  }
+
+  .endpoint-nodes li::before {
+    width: 28px;
+    left: -29px;
+  }
+
+  .endpoint-nodes code {
+    font-size: 12px;
+  }
+
+  .route-node strong {
+    font-size: 17px;
+  }
+
+  .fault-story {
+    gap: 32px;
+    grid-template-columns: 0.9fr 1.1fr;
+  }
+
+  .fault-chapter {
+    padding-left: 20px;
+  }
+
+  .fault-chapter p {
+    font-size: 14px;
+  }
+
+  .fault-chapter h3 {
+    font-size: 28px;
+  }
+
+  .store-header {
+    gap: 12px;
+    padding-inline: 16px;
+  }
+
+  .store-content {
+    padding-inline: 16px;
+  }
+
+  .product-object {
+    height: 90px;
+  }
+
+  .store-heading > strong {
+    font-size: 23px;
+  }
+
+  .fault-caption {
+    font-size: 11px;
+  }
+
+  .team-benefits {
+    gap: 24px;
+  }
+
+  .team-benefits h3 {
+    font-size: 20px;
+  }
+
+  .site-footer {
+    flex-wrap: wrap;
+  }
+
+  .site-footer nav {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (width <= 767px) {
+  body {
+    font-size: 16px;
+  }
+
+  section[id],
+  #terminal {
+    scroll-margin-top: 84px;
+  }
+
+  .header-inner {
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .wordmark {
+    font-size: 13px;
+  }
+
+  .brand-symbol {
+    font-size: 24px;
+    margin-right: 7px;
+  }
+
+  .site-nav {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding-bottom: 16px;
+  }
+
+  .site-nav > button {
+    margin-left: 0;
+  }
+
+  .has-menu .header-inner {
+    flex-wrap: nowrap;
+  }
+
+  .has-menu .site-nav {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    width: 100%;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--line-strong);
+    padding: 16px var(--gutter) 24px;
+  }
+
+  .has-menu .site-nav.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .has-menu .site-nav > a {
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .has-menu .site-nav > button {
+    margin-top: 12px;
+  }
+
+  .menu-backdrop {
+    position: fixed;
+    inset: 64px 0 0;
+    background: rgb(0 0 0 / 65%);
+    z-index: -1;
+  }
+
+  .menu-open {
+    overflow: hidden;
+  }
+
+  .hero {
+    padding-block: 44px 56px;
+    gap: 40px;
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 10vw, 64px);
+    line-height: 1.08;
+  }
+
+  .hero-label {
+    font-size: 10px;
+    margin-bottom: 20px;
+  }
+
+  .hero-description {
+    font-size: 16px;
+    margin-top: 22px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 28px;
+  }
+
+  .hero-actions .button {
+    font-size: 14px;
+  }
+
+  .terminal-header {
+    padding: 16px 12px;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .terminal-file {
+    gap: 7px;
+    font-size: 10px;
+  }
+
+  .terminal-file .file-name {
+    display: block;
+    margin-left: 0;
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  .status-dot {
+    margin-top: 5px;
+  }
+
+  .terminal-state {
+    font-size: 10px;
+    max-width: 95px;
+  }
+
+  .run-progress {
+    top: 69px;
+  }
+
+  .demo-config {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+
+  .demo-config select {
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .stage-list .request-row {
+    padding: 10px 12px;
+    grid-template-columns: 24px minmax(0, 1fr) 62px;
+  }
+
+  .stage-list small {
+    font-size: 9px;
+  }
+
+  .stage-list [data-stage-status] {
+    font-size: 10px;
+  }
+
+  .terminal-detail .tablist {
+    width: calc(100% - 24px);
+    margin-inline: 12px;
+  }
+
+  .tablist [role='tab'] {
+    font-size: 9px;
+    padding-inline: 4px;
+  }
+
+  .terminal-panel {
+    padding: 18px 12px;
+    min-height: 148px;
+  }
+
+  .terminal-panel pre {
+    font-size: 11px;
+  }
+
+  .terminal-footer {
+    padding-inline: 12px;
+  }
+
+  .demo-result {
+    font-size: 9px;
+  }
+
+  .terminal-play {
+    min-width: 68px;
+    padding-inline: 8px;
+    gap: 6px;
+  }
+
+  .terminal-result-link {
+    padding-inline: 12px;
+    font-size: 10px;
+  }
+
+  .problem-strip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    padding-block: 8px 48px;
+  }
+
+  .problem-strip > a {
+    grid-column: auto;
+  }
+
+  .problem-strip > p {
+    font-size: 23px;
+  }
+
+  .section {
+    padding-block: 56px;
+  }
+
+  .section-heading {
+    margin-bottom: 32px;
+  }
+
+  .section-heading .eyebrow,
+  .section-copy > .eyebrow {
+    margin-bottom: 18px;
+    font-size: 10px;
+  }
+
+  .how-steps {
+    gap: 28px 20px;
+    margin-top: 40px;
+  }
+
+  .how-step {
+    padding-top: 18px;
+  }
+
+  .how-step h3 {
+    font-size: 18px;
+    margin-top: 16px;
+  }
+
+  .how-step p {
+    font-size: 13px;
+    min-height: 108px;
+  }
+
+  .how-step a {
+    font-size: 10px;
+    gap: 5px;
+  }
+
+  .setup-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace-sidebar {
+    padding: 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .workspace-sidebar > .technical-label,
+  .workspace-sidebar h3,
+  .workspace-sidebar > p,
+  .project-secondary {
+    display: none;
+  }
+
+  .project-selected {
+    padding: 0;
+    border: 0;
+  }
+
+  .setup-form {
+    padding: 12px 16px 20px;
+  }
+
+  .setup-form .panel-top > .technical-label {
+    display: none;
+  }
+
+  .setup-form h3 {
+    font-size: 15px;
+  }
+
+  .form-display code {
+    padding: 12px;
+    font-size: 11px;
+  }
+
+  .form-display code .success {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .session-choice {
+    gap: 6px;
+    flex-direction: column;
+    font-size: 12px;
+  }
+
+  .session-choice legend {
+    margin-bottom: 0;
+  }
+
+  .session-description {
+    font-size: 11px;
+  }
+
+  .setup-ready {
+    font-size: 10px;
+    gap: 8px;
+  }
+
+  .setup-ready > .technical-label {
+    display: none;
+  }
+
+  .panel-top {
+    padding: 16px;
+    font-size: 11px;
+  }
+
+  .panel-top > .technical-label {
+    font-size: 9px;
+  }
+
+  .dependency-live {
+    font-size: 8px;
+  }
+
+  .route-switch {
+    padding: 16px 12px 0;
+    gap: 6px;
+  }
+
+  .route-switch button {
+    font-size: 10px;
+    padding-inline: 9px;
+  }
+
+  .dependency-graph {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 16px;
+    gap: 28px;
+  }
+
+  .route-node {
+    padding: 16px;
+  }
+
+  .route-node::after {
+    left: 30px;
+    top: 100%;
+    width: 1px;
+    height: 29px;
+  }
+
+  .endpoint-nodes {
+    margin-left: 30px;
+    gap: 12px;
+  }
+
+  .endpoint-nodes::before {
+    top: 0;
+    left: -16px;
+    bottom: 33px;
+  }
+
+  .endpoint-nodes li::before {
+    left: -17px;
+    width: 16px;
+  }
+
+  .endpoint-nodes code {
+    font-size: 10px;
+  }
+
+  .map-footer {
+    padding: 10px 16px;
+  }
+
+  .fault-story {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .fault-stage {
+    order: -1;
+    top: 72px;
+    z-index: 2;
+    width: 100%;
+    padding: 8px 0 10px;
+    background: var(--bg);
+  }
+
+  .fault-stage-inner {
+    width: 100%;
+  }
+
+  .scenario-status {
+    margin-bottom: 8px;
+  }
+
+  .scenario-status .technical-label {
+    font-size: 9px;
+  }
+
+  .profile-badge {
+    font-size: 11px;
+  }
+
+  .browser-toolbar {
+    padding: 8px 12px;
+  }
+
+  .browser-toolbar code {
+    font-size: 9px;
+  }
+
+  .store-header {
+    padding: 10px 14px;
+    font-size: 9px;
+  }
+
+  .store-header strong {
+    font-size: 15px;
+  }
+
+  .store-content {
+    padding: 12px 14px;
+  }
+
+  .store-heading {
+    display: none;
+  }
+
+  .store-products {
+    margin-top: 0;
+    gap: 10px;
+  }
+
+  .product-object {
+    height: 82px;
+  }
+
+  .object-one span,
+  .object-two span {
+    transform: scale(0.65) translateY(-10px);
+  }
+
+  .store-products > div > span {
+    margin-top: 5px;
+    font-size: 9px;
+  }
+
+  .store-products small {
+    display: none;
+  }
+
+  .store-recommendations {
+    margin-top: 10px;
+    padding-top: 8px;
+    font-size: 9px;
+  }
+
+  .recommendation-lines {
+    margin-top: 6px;
+  }
+
+  .recommendation-lines i {
+    height: 10px;
+  }
+
+  .store-failure {
+    inset: 67px 0 0;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .failure-mark {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+    margin-bottom: 0;
+  }
+
+  .store-failure strong {
+    font-size: 14px;
+  }
+
+  .store-failure > span:last-child {
+    font-size: 10px;
+  }
+
+  .store-recovered {
+    right: 8px;
+    bottom: 8px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .fault-network {
+    margin-top: 10px;
+    padding-left: 10px;
+  }
+
+  .fault-network > span {
+    font-size: 8px;
+  }
+
+  .fault-network > code {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  .fault-network > div {
+    font-size: 9px;
+    margin-top: 3px;
+  }
+
+  .fault-caption {
+    display: none;
+  }
+
+  .fault-stage .inline-link {
+    display: none;
+  }
+
+  .fault-chapters {
+    width: 100%;
+  }
+
+  .fault-chapter {
+    min-height: auto;
+    justify-content: flex-start;
+    padding: 32px 0 32px 20px;
+    scroll-margin-top: 430px;
+  }
+
+  .fault-chapter h3 {
+    font-size: 27px;
+    margin-top: 16px;
+  }
+
+  .fault-chapter p {
+    font-size: 14px;
+  }
+
+  .fault-chapter::before {
+    top: 32px;
+  }
+
+  .matrix-scroll {
+    padding: 10px 16px;
+  }
+
+  .matrix-panel > .panel-top {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .matrix-panel > .panel-top .technical-label {
+    font-size: 8px;
+  }
+
+  .matrix-legend {
+    padding: 16px;
+    gap: 8px 18px;
+    font-size: 10px;
+  }
+
+  .matrix-insight {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .matrix-insight > p {
+    width: calc(100% - 28px);
+    font-size: 12px;
+  }
+
+  .matrix-insight > a {
+    margin-left: 26px;
+    font-size: 12px;
+  }
+
+  .evidence-context > div {
+    grid-template-columns: 102px minmax(0, 1fr);
+  }
+
+  .evidence-context span {
+    font-size: 8px;
+  }
+
+  .evidence-context code {
+    font-size: 11px;
+  }
+
+  .evidence-panel .tablist {
+    width: calc(100% - 32px);
+    margin-inline: 16px;
+  }
+
+  .evidence-body {
+    padding: 16px;
+    min-height: 300px;
+  }
+
+  .evidence-body pre {
+    font-size: 11px;
+  }
+
+  .capture-content {
+    min-height: 206px;
+    padding: 20px 14px;
+  }
+
+  .capture-content > strong {
+    font-size: 14px;
+  }
+
+  .capture-meta {
+    font-size: 9px;
+  }
+
+  .evidence-bottom {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+  }
+
+  .evidence-bottom > span {
+    font-size: 9px;
+  }
+
+  .team-benefits {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    margin-top: 40px;
+  }
+
+  .team-benefits h3 {
+    margin-top: 16px;
+    font-size: 23px;
+  }
+
+  .team-benefits p {
+    max-width: 470px;
+  }
+
+  .final-cta {
+    padding-block: 72px;
+  }
+
+  .final-cta h2 {
+    font-size: clamp(35px, 8.6vw, 56px);
+  }
+
+  .final-cta > button {
+    width: 100%;
+  }
+
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .site-footer nav {
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+}
+
+@media (height <= 760px) and (width >= 768px) {
+  .fault-stage {
+    top: 84px;
+    padding-top: 0;
+  }
+
+  .product-object {
+    height: 80px;
+  }
+
+  .store-content {
+    padding-block: 16px;
+  }
+
+  .store-recommendations {
+    margin-top: 12px;
+  }
+
+  .fault-caption {
+    min-height: 6.4em;
+    font-size: 11px;
+  }
+}
+
+@media (height <= 650px) and (width <= 767px) {
+  .fault-stage {
+    position: relative;
+    top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fault-stage {
+    position: relative;
+    top: 0;
+  }
+
+  .fault-chapter {
+    min-height: 0;
+    padding-block: 32px;
+  }
+}

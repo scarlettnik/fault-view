@@ -1,0 +1,15 @@
+{
+  "extends": ["html-validate:recommended"],
+  "rules": {
+    "attr-pattern": ["error", { "pattern": "^(?![oO][nN]).+$", "ignoreForeign": false }],
+    "doctype-style": ["error", { "style": "lowercase" }],
+    "no-inline-style": "error",
+    "no-implicit-close": "error",
+    "no-style-tag": ["error", { "allowTemplate": false }],
+    "heading-level": "error",
+    "no-dup-attr": "error",
+    "no-dup-id": "error",
+    "no-trailing-whitespace": "error",
+    "void-style": ["error", { "style": "selfclose" }]
+  }
+}

@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="FaultView проверяет, как frontend переживает сбои API. Найдите зависимости страниц, смоделируйте отказы и разберите результат до релиза."
+    />
+    <meta name="theme-color" content="#090b0d" />
+    <meta property="og:title" content="FaultView · API упал. А интерфейс?" />
+    <meta
+      property="og:description"
+      content="От реального трафика к сценариям отказа. Карта зависимостей, матрица устойчивости и доказательства сбоя в одном потоке."
+    />
+    <meta property="og:type" content="website" />
+    <title>FaultView · Проверяйте устойчивость frontend до релиза</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles/tokens.css" />
+    <link rel="stylesheet" href="./styles/reset.css" />
+    <link rel="stylesheet" href="./styles/base.css" />
+    <link rel="stylesheet" href="./styles/layout.css" />
+    <link rel="stylesheet" href="./styles/components.css" />
+    <link rel="stylesheet" href="./styles/hero.css" />
+    <link rel="stylesheet" href="./styles/sections.css" />
+    <link rel="stylesheet" href="./styles/motion.css" />
+    <link rel="stylesheet" href="./styles/responsive.css" />
+    <script defer src="./scripts/motion.js"></script>
+    <script defer src="./scripts/demo-data.js"></script>
+    <script defer src="./scripts/terminal-tabs.js"></script>
+    <script defer src="./scripts/mobile-menu.js"></script>
+    <script defer src="./scripts/terminal-demo.js"></script>
+    <script defer src="./scripts/interactions.js"></script>
+    <script defer src="./scripts/scroll-reveal.js"></script>
+    <script defer src="./scripts/main.js"></script>
+    <noscript>
+      <link rel="stylesheet" href="./styles/no-script.css" />
+    </noscript>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Перейти к содержимому</a>
+    <header class="site-header" data-header>
+      <div class="container header-inner">
+        <a class="wordmark" href="#top" aria-label="FaultView, в начало"
+          ><span class="brand-symbol" aria-hidden="true">f/</span>FAULT<span>VIEW</span></a
+        >
+        <button
+          class="menu-trigger"
+          type="button"
+          aria-label="Открыть меню"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          hidden
+        >
+          <span aria-hidden="true"></span><span aria-hidden="true"></span>
+        </button>
+        <nav class="site-nav" id="site-nav" aria-label="Основная навигация">
+          <a href="#discovery">Возможности</a><a href="#how">Как работает</a
+          ><a href="#matrix">Результаты</a>
+          <button
+            class="button button-small button-outline"
+            type="button"
+            data-demo-launch
+            disabled
+          >
+            Запустить демо <span class="arrow" aria-hidden="true">↗</span>
+          </button>
+        </nav>
+      </div>
+      <div class="menu-backdrop" hidden></div>
+    </header>
+    <main id="main">
+      <section class="hero container" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow hero-label">FRONTEND RESILIENCE TESTING</p>
+          <h1 id="hero-title">API упал.<br />А <span class="accent">интерфейс?</span></h1>
+          <p class="hero-description">
+            Узнайте, что увидит пользователь при сбое API. FaultView находит зависимости страниц,
+            моделирует отказы и показывает, где ломается UI.
+          </p>
+          <div class="hero-actions">
+            <button class="button button-primary" type="button" data-demo-launch disabled>
+              Запустить демо <span class="arrow" aria-hidden="true">→</span>
+            </button>
+            <a class="button button-outline" href="#how">Изучить возможности</a>
+          </div>
+        </div>
+        <div class="terminal-scene">
+          <section
+            class="terminal"
+            id="terminal"
+            tabindex="-1"
+            aria-label="Интерактивное демо FaultView"
+            data-state="idle"
+          >
+            <div class="terminal-header">
+              <div class="terminal-file">
+                <span class="status-dot" aria-hidden="true"></span
+                ><span>FAULTVIEW <span class="file-name">/ resilience run</span></span>
+              </div>
+              <span class="terminal-state" data-terminal-state>Готов к запуску</span>
+            </div>
+            <div class="run-progress" aria-hidden="true"><span></span></div>
+            <div class="demo-config">
+              <label
+                >Страница<select data-demo-route disabled>
+                  <option value="products">/products</option>
+                  <option value="checkout">/checkout</option>
+                  <option value="account">/account</option>
+                </select></label
+              >
+              <label
+                >Сценарий<select data-demo-profile disabled>
+                  <option value="error">HTTP 500</option>
+                  <option value="latency">Latency</option>
+                  <option value="timeout">Timeout</option>
+                  <option value="recovery">Recovery</option>
+                  <option value="healthy">Healthy</option>
+                </select></label
+              >
+            </div>
+            <ol class="request-list stage-list" aria-label="Этапы проверки">
+              <li class="request-row" data-stage="discover">
+                <span class="stage-index">01</span
+                ><span><strong>Discover</strong><small>Зависимости из трафика UI</small></span
+                ><span data-stage-status>-</span>
+              </li>
+              <li class="request-row" data-stage="simulate">
+                <span class="stage-index">02</span
+                ><span><strong>Simulate</strong><small>Изолированный отказ API</small></span
+                ><span data-stage-status>-</span>
+              </li>
+              <li class="request-row" data-stage="verify">
+                <span class="stage-index">03</span
+                ><span><strong>Verify</strong><small>Проверка состояния страницы</small></span
+                ><span data-stage-status>-</span>
+              </li>
+              <li class="request-row" data-stage="evidence">
+                <span class="stage-index">04</span
+                ><span><strong>Explain</strong><small>Скриншот, console, network</small></span
+                ><span data-stage-status>-</span>
+              </li>
+            </ol>
+            <div class="terminal-detail" data-tabs="terminal">
+              <div class="tablist" role="tablist" aria-label="Детали демо">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-scenario"
+                  aria-selected="true"
+                  aria-controls="panel-scenario"
+                  tabindex="0"
+                  disabled
+                >
+                  СЦЕНАРИЙ
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-ui"
+                  aria-selected="false"
+                  aria-controls="panel-ui"
+                  tabindex="-1"
+                  disabled
+                >
+                  ИНТЕРФЕЙС
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-outcome"
+                  aria-selected="false"
+                  aria-controls="panel-outcome"
+                  tabindex="-1"
+                  disabled
+                >
+                  РЕЗУЛЬТАТ
+                </button>
+                <span class="tab-indicator" aria-hidden="true"></span>
+              </div>
+              <div
+                class="terminal-panel"
+                role="tabpanel"
+                id="panel-scenario"
+                aria-labelledby="tab-scenario"
+                tabindex="0"
+              >
+                <span class="panel-label">ИНТЕРАКТИВНОЕ ДЕМО</span>
+                <pre><code>observe → inject fault → check UI
+<span class="code-muted">Один endpoint. Вся картина последствий.</span></code></pre>
+              </div>
+              <div
+                class="terminal-panel"
+                role="tabpanel"
+                id="panel-ui"
+                aria-labelledby="tab-ui"
+                tabindex="0"
+                hidden
+              >
+                <div class="terminal-mini-app" data-terminal-app data-verdict="idle">
+                  <div class="mini-app-bars" aria-hidden="true"><i></i><i></i><i></i></div>
+                  <p data-app-state>Ожидает проверки</p>
+                </div>
+              </div>
+              <div
+                class="terminal-panel"
+                role="tabpanel"
+                id="panel-outcome"
+                aria-labelledby="tab-outcome"
+                tabindex="0"
+                hidden
+              >
+                <p class="terminal-explanation" data-terminal-result>
+                  Результат появится после запуска сценария.
+                </p>
+                <pre class="terminal-network" data-terminal-network>
+Выберите страницу и профиль отказа.</pre
+                >
+              </div>
+            </div>
+            <div class="terminal-footer">
+              <span class="demo-result" data-demo-status>Discovery → Simulate → Verify</span>
+              <button
+                class="terminal-play"
+                type="button"
+                aria-label="Запустить сценарий"
+                data-demo-launch
+                disabled
+              >
+                <span class="play-symbol" aria-hidden="true">▷</span
+                ><span data-play-label>Run</span>
+              </button>
+            </div>
+            <a class="terminal-result-link" href="#evidence" data-open-result hidden
+              >Открыть разбор результата <span aria-hidden="true">↗</span></a
+            >
+            <p
+              class="sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-announcement
+            ></p>
+          </section>
+        </div>
+        <noscript
+          ><p class="no-js-note">
+            Для интерактивного демо включите JavaScript. Возможности и примеры доступны ниже.
+          </p></noscript
+        >
+      </section>
+
+      <section class="problem-strip container" aria-label="Зачем проверять отказы" data-reveal>
+        <p>Happy path пройден.<br /><span>Сбой API ещё не проверен.</span></p>
+        <div>
+          <span class="technical-label">ГРАНИЦА ПРОВЕРКИ</span>
+          <p>
+            Один недоступный блок рекомендаций может уронить весь каталог. Успешный E2E-тест этого
+            не покажет.
+          </p>
+        </div>
+        <a class="inline-link" href="#faults"
+          >Проверить другой путь <span aria-hidden="true">↘</span></a
+        >
+      </section>
+
+      <section class="section container" id="how" aria-labelledby="how-title" data-reveal>
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow">ОТ СТРАНИЦЫ ДО ПРИЧИНЫ</p>
+            <h2 id="how-title">Одна проверка.<br />Вся цепочка последствий.</h2>
+          </div>
+          <p>
+            Не собирайте сценарии отказов вручную. Начните с приложения - и проследите путь от его
+            зависимостей до поведения интерфейса.
+          </p>
+        </div>
+        <ol class="how-steps">
+          <li class="how-step">
+            <span class="step-number">01</span>
+            <h3>Подключите</h3>
+            <p>Frontend URL, OpenAPI и браузерную сессию для закрытых страниц.</p>
+            <a href="#setup" aria-label="Подробнее: подключение проекта"
+              >Настроить проект <span aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li class="how-step">
+            <span class="step-number">02</span>
+            <h3>Обнаружьте</h3>
+            <p>Playwright открывает страницы и связывает маршруты с реальными запросами.</p>
+            <a href="#discovery" aria-label="Подробнее: обнаружение зависимостей"
+              >Увидеть зависимости <span aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li class="how-step">
+            <span class="step-number">03</span>
+            <h3>Создайте отказ</h3>
+            <p>Задержите ответ, верните 500 или оборвите соединение у одного endpoint.</p>
+            <a href="#faults" aria-label="Подробнее: моделирование отказа"
+              >Выбрать сценарий <span aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li class="how-step">
+            <span class="step-number">04</span>
+            <h3>Разберите</h3>
+            <p>Найдите хрупкий маршрут в матрице и откройте логи сбоя.</p>
+            <a href="#matrix" aria-label="Подробнее: результаты проверки"
+              >Открыть результаты <span aria-hidden="true">↗</span></a
+            >
+          </li>
+        </ol>
+      </section>
+
+      <section class="section container" id="setup" aria-labelledby="setup-title" data-reveal>
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow">PROJECTS / SETUP</p>
+            <h2 id="setup-title">Начните с приложения,<br />которое уже есть.</h2>
+          </div>
+          <p>
+            Соберите URL, спецификацию и способ входа в одном проекте. Здесь же остаются
+            зависимости, история сканирований и результаты.
+          </p>
+        </div>
+        <div class="setup-workspace scene-surface">
+          <div class="workspace-sidebar">
+            <span class="technical-label">WORKSPACE</span>
+            <h3>Ваши проекты</h3>
+            <div class="project-selected">
+              <span class="project-monogram">S</span>
+              <div>Storefront<small>store.example</small></div>
+              <span class="success">✓</span>
+            </div>
+            <div class="project-secondary">Customer Portal<span>portal.example</span></div>
+          </div>
+          <div class="setup-form">
+            <div class="panel-top">
+              <h3>Подключение Storefront</h3>
+              <span class="technical-label">SETUP</span>
+            </div>
+            <div class="form-display">
+              <span>Frontend URL</span><code>https://store.example</code>
+            </div>
+            <div class="form-display">
+              <span>OpenAPI specification</span
+              ><code
+                ><span class="accent">{ }</span> storefront.openapi.yaml
+                <span class="success">✓ YAML / JSON</span></code
+              >
+            </div>
+            <fieldset class="session-choice">
+              <legend>Доступ к приложению</legend>
+              <label
+                ><input type="radio" name="session" value="anonymous" checked /> Anonymous</label
+              ><label
+                ><input type="radio" name="session" value="saved" /> Saved browser session</label
+              >
+            </fieldset>
+            <p class="session-description" data-session-description>
+              Проверка общедоступных страниц без авторизации.
+            </p>
+            <div class="setup-ready">
+              <span class="success">✓</span
+              ><span data-setup-ready>URL и спецификация подключены</span
+              ><span class="technical-label">READY FOR DISCOVERY</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="section container split-section"
+        id="discovery"
+        aria-labelledby="discovery-title"
+        data-reveal
+      >
+        <div class="section-copy">
+          <p class="eyebrow">DISCOVERY / DEPENDENCY MAP</p>
+          <h2 id="discovery-title">У каждого экрана<br />есть слабое звено.</h2>
+          <p>
+            FaultView наблюдает HTTP-трафик в браузере и строит карту
+            <strong>route → endpoint</strong>. Вы видите, от каких API зависит пользовательский
+            путь.
+          </p>
+          <p>
+            OpenAPI задаёт контекст. Реальные запросы UI показывают, что действительно используется.
+          </p>
+        </div>
+        <div class="dependency-scene scene-surface">
+          <div class="panel-top">
+            <span class="technical-label">ROUTE DEPENDENCY MAP</span
+            ><span class="success dependency-live">● DISCOVERED</span>
+          </div>
+          <div class="route-switch" role="group" aria-label="Страница на карте зависимостей">
+            <button type="button" data-map-route="products" aria-pressed="true">/products</button>
+            <button type="button" data-map-route="checkout" aria-pressed="false">/checkout</button>
+            <button type="button" data-map-route="account" aria-pressed="false">/account</button>
+          </div>
+          <div class="dependency-graph">
+            <div class="route-node">
+              <span class="technical-label">FRONTEND ROUTE</span
+              ><strong data-map-path>/products</strong><small>Наблюдаемый трафик</small>
+            </div>
+            <ul class="endpoint-nodes" data-map-endpoints>
+              <li><code>GET /api/products</code><span>основные данные</span></li>
+              <li class="target-endpoint">
+                <code>GET /api/recommendations</code><span>выбран для отказа</span>
+              </li>
+              <li><code>GET /api/cart</code><span>зависимость страницы</span></li>
+            </ul>
+          </div>
+          <div class="map-footer">
+            <p><strong data-map-count>3</strong> зависимости страницы</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section container" id="faults" aria-labelledby="faults-title" data-reveal>
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow">FAULT INJECTION</p>
+            <h2 id="faults-title">Создайте сбой.<br />Увидьте его радиус.</h2>
+          </div>
+          <p>
+            Меняется один endpoint. Проверяется весь пользовательский путь: данные, состояния
+            ожидания, fallback и восстановление.
+          </p>
+        </div>
+        <div class="fault-story">
+          <div class="fault-chapters" role="group" aria-label="Профили отказа">
+            <article class="fault-chapter is-active" data-profile-chapter="healthy">
+              <span class="technical-label">BASELINE / 200 OK</span>
+              <h3>Сначала - здоровый интерфейс.</h3>
+              <p>Зафиксируйте исходное состояние для сравнения. Каталог и рекомендации доступны.</p>
+            </article>
+            <article class="fault-chapter" data-profile-chapter="latency">
+              <span class="technical-label">LATENCY / +3 000 MS</span>
+              <h3>Ответ задержался.<br />Пользователь остался?</h3>
+              <p>
+                Проверьте loading-состояния. Страница должна сохранять контекст, пока ждёт данные.
+              </p>
+            </article>
+            <article class="fault-chapter" data-profile-chapter="error">
+              <span class="technical-label">HTTP 500 / 503</span>
+              <h3>Рекомендации упали.<br />Каталог исчез.</h3>
+              <p>
+                Найдите неожиданный blast radius: ошибка необязательного блока не должна ломать всю
+                страницу.
+              </p>
+            </article>
+            <article class="fault-chapter" data-profile-chapter="timeout">
+              <span class="technical-label">TIMEOUT / NETWORK ERROR</span>
+              <h3>Запрос не ответил.<br />А интерфейс всё ждёт.</h3>
+              <p>
+                Оборвите соединение. Проверьте таймаут, сообщение об ошибке и возможность повторить
+                запрос.
+              </p>
+            </article>
+            <article class="fault-chapter" data-profile-chapter="recovery">
+              <span class="technical-label">RECOVERY / RETRY</span>
+              <h3>API снова работает.<br />Интерфейс тоже?</h3>
+              <p>
+                Верните endpoint в строй. Убедитесь, что страница восстанавливается без потери
+                пользовательского контекста.
+              </p>
+            </article>
+          </div>
+          <div class="fault-stage">
+            <div class="fault-stage-inner">
+              <div class="scenario-status">
+                <span class="technical-label">LIVE SCENARIO</span
+                ><span class="profile-badge" data-scene-profile>Healthy</span>
+              </div>
+              <div class="browser-scene" data-fault-app data-verdict="pass" data-profile="healthy">
+                <div class="browser-toolbar">
+                  <span aria-hidden="true">□</span><code>store.example/products</code
+                  ><span aria-hidden="true">↗</span>
+                </div>
+                <div class="store-header">
+                  <strong>FORM<span class="accent">/</span></strong
+                  ><span>Каталог</span><span>Корзина 02</span>
+                </div>
+                <div class="store-content">
+                  <div class="store-heading">
+                    <span>Объекты для жизни</span><strong>Продумано.<br />До деталей.</strong>
+                  </div>
+                  <div class="store-products" role="group" aria-label="Товары">
+                    <div>
+                      <div class="product-object object-one"><span></span></div>
+                      <span>Arc Light</span><small>Освещение</small>
+                    </div>
+                    <div>
+                      <div class="product-object object-two"><span></span></div>
+                      <span>Mono Seat</span><small>Мебель</small>
+                    </div>
+                  </div>
+                  <div class="store-recommendations">
+                    <span>Вам может понравиться</span>
+                    <div class="recommendation-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+                  </div>
+                </div>
+                <div class="store-failure">
+                  <span class="failure-mark" aria-hidden="true">!</span
+                  ><strong data-fault-message>Не удалось загрузить страницу</strong
+                  ><span>Ошибка в блоке рекомендаций</span>
+                </div>
+                <div class="store-recovered">✓ Соединение восстановлено</div>
+              </div>
+              <div class="fault-network">
+                <span class="technical-label">INJECTED ENDPOINT</span
+                ><code data-fault-endpoint>GET /api/recommendations</code>
+                <div>
+                  <span data-fault-network>200 OK</span
+                  ><span class="verdict pass" data-fault-verdict>PASS</span>
+                </div>
+              </div>
+              <p class="fault-caption" data-fault-caption>
+                Основной сценарий доступен. Каталог и рекомендации загружены.
+              </p>
+              <a class="inline-link" href="#matrix"
+                >Сравнить все сценарии <span aria-hidden="true">↓</span></a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section container" id="matrix" aria-labelledby="matrix-title" data-reveal>
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow">RESILIENCE MATRIX</p>
+            <h2 id="matrix-title">Все отказы.<br />Одна ясная картина.</h2>
+          </div>
+          <p>
+            Сравните маршруты по одним условиям. Найдите самый хрупкий путь и откройте конкретный
+            запуск нажатием на результат.
+          </p>
+        </div>
+        <div class="matrix-panel scene-surface">
+          <div class="panel-top">
+            <span>Storefront <span class="code-muted">/ resilience scan</span></span
+            ><span class="technical-label">3 ROUTES × 5 SCENARIOS</span>
+          </div>
+          <section
+            class="matrix-scroll"
+            aria-label="Матрица результатов, прокручивается горизонтально"
+            tabindex="0"
+          >
+            <table class="resilience-matrix">
+              <caption class="sr-only">
+                Результаты проверки устойчивости. Нажмите на ячейку для разбора запуска.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Frontend route</th>
+                  <th scope="col">Healthy</th>
+                  <th scope="col">Latency</th>
+                  <th scope="col">HTTP 500</th>
+                  <th scope="col">Timeout</th>
+                  <th scope="col">Recovery</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">/products</th>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="products:healthy"
+                      aria-label="/products, Healthy: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell warn"
+                      data-result="products:latency"
+                      aria-label="/products, Latency: WARN"
+                    >
+                      ! WARN
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell fail"
+                      data-result="products:error"
+                      aria-label="/products, HTTP 500: FAIL"
+                    >
+                      × FAIL
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell fail"
+                      data-result="products:timeout"
+                      aria-label="/products, Timeout: FAIL"
+                    >
+                      × FAIL
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="products:recovery"
+                      aria-label="/products, Recovery: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">/checkout</th>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="checkout:healthy"
+                      aria-label="/checkout, Healthy: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell warn"
+                      data-result="checkout:latency"
+                      aria-label="/checkout, Latency: WARN"
+                    >
+                      ! WARN
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="checkout:error"
+                      aria-label="/checkout, HTTP 500: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell warn"
+                      data-result="checkout:timeout"
+                      aria-label="/checkout, Timeout: WARN"
+                    >
+                      ! WARN
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="checkout:recovery"
+                      aria-label="/checkout, Recovery: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">/account</th>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="account:healthy"
+                      aria-label="/account, Healthy: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="account:latency"
+                      aria-label="/account, Latency: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="account:error"
+                      aria-label="/account, HTTP 500: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell warn"
+                      data-result="account:timeout"
+                      aria-label="/account, Timeout: WARN"
+                    >
+                      ! WARN
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="matrix-cell pass"
+                      data-result="account:recovery"
+                      aria-label="/account, Recovery: PASS"
+                    >
+                      ✓ PASS
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          <div class="matrix-legend">
+            <span><i class="success">✓</i> PASS - путь доступен</span
+            ><span><i class="warning">!</i> WARN - есть деградация</span
+            ><span><i class="error">×</i> FAIL - сценарий сломан</span>
+          </div>
+        </div>
+        <div class="matrix-insight">
+          <span class="error">↳</span>
+          <p>
+            <strong>/products</strong> теряет весь интерфейс из-за необязательной зависимости.
+            Начните с этого маршрута.
+          </p>
+          <a class="inline-link" href="#evidence" data-critical-result
+            >Разобрать сбой <span aria-hidden="true">↗</span></a
+          >
+        </div>
+      </section>
+
+      <section
+        class="section container split-section evidence-section"
+        id="evidence"
+        aria-labelledby="evidence-title"
+        data-reveal
+      >
+        <div class="section-copy">
+          <p class="eyebrow">RUN DETAILS / EVIDENCE</p>
+          <h2 id="evidence-title" tabindex="-1">От «всё сломалось»<br />к конкретной причине.</h2>
+          <p>
+            Откройте запуск и свяжите состояние UI с отказавшим endpoint. Скриншот, ошибки console и
+            события network собраны в одном месте.
+          </p>
+          <div class="evidence-context">
+            <div><span>ROUTE</span><code data-evidence-route>/products</code></div>
+            <div><span>FAILURE PROFILE</span><code data-evidence-profile>HTTP 500</code></div>
+            <div><span>ENDPOINT</span><code data-evidence-endpoint>/api/recommendations</code></div>
+          </div>
+          <p class="evidence-advice" data-evidence-advice>
+            Ошибка необязательного блока прерывает рендер всей страницы. Изолируйте рекомендации и
+            добавьте локальный fallback.
+          </p>
+        </div>
+        <div class="evidence-panel scene-surface" data-tabs="evidence">
+          <div class="panel-top">
+            <span class="technical-label">RUN DETAILS</span
+            ><span class="verdict fail" data-evidence-verdict>FAIL</span>
+          </div>
+          <div class="tablist" role="tablist" aria-label="Доказательства результата">
+            <button
+              type="button"
+              role="tab"
+              id="tab-screenshot"
+              aria-selected="true"
+              aria-controls="panel-screenshot"
+              tabindex="0"
+              disabled
+            >
+              SCREENSHOT
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-console"
+              aria-selected="false"
+              aria-controls="panel-console"
+              tabindex="-1"
+              disabled
+            >
+              CONSOLE
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-network"
+              aria-selected="false"
+              aria-controls="panel-network"
+              tabindex="-1"
+              disabled
+            >
+              NETWORK
+            </button>
+            <span class="tab-indicator" aria-hidden="true"></span>
+          </div>
+          <div
+            class="evidence-body"
+            role="tabpanel"
+            id="panel-screenshot"
+            aria-labelledby="tab-screenshot"
+            tabindex="0"
+          >
+            <div class="evidence-capture" data-capture data-verdict="fail">
+              <div class="capture-toolbar">
+                <span>FORM/</span><code data-capture-path>/products</code>
+              </div>
+              <div class="capture-content">
+                <div class="capture-shapes" aria-hidden="true"><i></i><i></i><i></i></div>
+                <strong data-capture-state>Не удалось загрузить страницу</strong
+                ><span data-capture-detail>Блок рекомендаций недоступен</span>
+              </div>
+            </div>
+            <div class="capture-meta">
+              <span>Состояние страницы при проверке</span><span data-capture-profile>HTTP 500</span>
+            </div>
+          </div>
+          <div
+            class="evidence-body"
+            role="tabpanel"
+            id="panel-console"
+            aria-labelledby="tab-console"
+            tabindex="0"
+            hidden
+          >
+            <span class="technical-label">BROWSER CONSOLE</span>
+            <pre><code data-evidence-console>ERROR Unhandled rejection
+Recommendations.load → HTTP 500
+Page.render interrupted
+
+/api/recommendations</code></pre>
+          </div>
+          <div
+            class="evidence-body"
+            role="tabpanel"
+            id="panel-network"
+            aria-labelledby="tab-network"
+            tabindex="0"
+            hidden
+          >
+            <span class="technical-label">NETWORK EVENTS</span>
+            <pre><code data-evidence-network>GET /api/products          200 OK
+GET /api/recommendations   500 Internal Server Error
+GET /api/cart              200 OK
+
+Failure profile: HTTP 500</code></pre>
+          </div>
+          <div class="evidence-bottom">
+            <span>Сбой → последствия → исправление</span
+            ><a href="#matrix" class="inline-link">К матрице <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section container" id="teams" aria-labelledby="teams-title" data-reveal>
+        <div class="section-heading">
+          <p class="eyebrow">ОДИН КОНТЕКСТ ДЛЯ КОМАНДЫ</p>
+          <h2 id="teams-title">Каждому - свой ответ.<br />Всем - одна причина.</h2>
+        </div>
+        <div class="team-benefits">
+          <article>
+            <span class="technical-label">DEVELOPMENT</span>
+            <h3>Что исправить в UI?</h3>
+            <p>Найдите границы ошибок, добавьте fallback и проверьте восстановление до релиза.</p>
+          </article>
+          <article>
+            <span class="technical-label">QA / AUTOMATION</span>
+            <h3>Как повторить отказ?</h3>
+            <p>
+              Запускайте одни и те же профили сбоев и сравнивайте поведение пользовательских путей.
+            </p>
+          </article>
+          <article>
+            <span class="technical-label">SRE / PLATFORM</span>
+            <h3>Каков blast radius?</h3>
+            <p>Увидьте, какие страницы и сценарии затрагивает отказ конкретной API-зависимости.</p>
+          </article>
+        </div>
+      </section>
+
+      <section
+        class="section final-cta container"
+        id="demo"
+        aria-labelledby="demo-title"
+        data-reveal
+      >
+        <p class="eyebrow">FAULTVIEW</p>
+        <h2 id="demo-title">Пусть первым сбой<br />увидит ваша команда.</h2>
+        <p>Выберите страницу. Создайте отказ. Узнайте, что останется работать.</p>
+        <button type="button" class="button button-primary" data-demo-launch disabled>
+          Запустить демо <span class="arrow" aria-hidden="true">→</span>
+        </button>
+      </section>
+    </main>
+    <footer class="site-footer container">
+      <a href="#top" class="wordmark" aria-label="FaultView, в начало">FAULT<span>VIEW</span></a>
+      <p>Устойчивость начинается до релиза.</p>
+      <nav aria-label="Навигация в подвале">
+        <a href="#discovery">Зависимости</a><a href="#faults">Сценарии</a
+        ><a href="#matrix">Результаты</a>
+      </nav>
+    </footer>
+  </body>
+</html>
