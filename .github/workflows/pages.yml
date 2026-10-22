@@ -1,20 +1,16 @@
-name: Quality checks and GitHub Pages
+name: Lint and deploy
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  verify:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,27 +19,27 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - name: Prepare static files
-        if: github.event_name != 'pull_request'
-        run: |
-          mkdir -p "${{ runner.temp }}/site"
-          cp -R index.html styles scripts assets "${{ runner.temp }}/site/"
-      - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
-        with:
-          path: ${{ runner.temp }}/site
+      - run: npm run lint
 
   deploy:
-    if: github.event_name != 'pull_request'
-    needs: verify
+    if: github.ref == 'refs/heads/main'
+    needs: lint
     runs-on: ubuntu-latest
+    concurrency: pages
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p "${{ runner.temp }}/site"
+          cp -R index.html styles scripts assets "${{ runner.temp }}/site/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
       - uses: actions/deploy-pages@v4
         id: deployment
