@@ -1,0 +1,4 @@
+/* Show every tab panel when JavaScript cannot enable the tab controls. */
+[data-tabs] [role='tabpanel'][hidden] {
+  display: block !important;
+}

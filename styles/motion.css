@@ -1,0 +1,149 @@
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-y, 14px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes status-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-header {
+    --enter-y: -6px;
+
+    animation: enter 260ms var(--ease-out);
+  }
+
+  .hero-label {
+    animation: enter 180ms var(--ease-out) both;
+  }
+
+  .hero h1 {
+    animation: enter 350ms var(--ease-out) 80ms both;
+  }
+
+  .hero-description {
+    animation: enter 280ms var(--ease-out) 180ms both;
+  }
+
+  .hero-actions {
+    animation: enter 220ms var(--ease-out) 260ms both;
+  }
+
+  .terminal-scene {
+    animation: enter 360ms var(--ease-out) 180ms both;
+  }
+
+  .terminal[data-state='preparing'] .status-dot {
+    animation: status-pulse 1200ms ease-in-out 1;
+  }
+
+  .terminal[data-state='completed'] .demo-result {
+    animation: enter 220ms var(--ease-out);
+
+    --enter-y: 4px;
+  }
+
+  .stage-list .just-finished [data-stage-status] {
+    animation: enter 200ms var(--ease-out);
+
+    --enter-y: 4px;
+  }
+
+  .site-nav.is-open {
+    animation: enter 200ms var(--ease-out);
+
+    --enter-y: -8px;
+  }
+
+  .menu-backdrop:not([hidden]) {
+    animation: enter 160ms var(--ease-out);
+
+    --enter-y: 0px;
+  }
+
+  .browser-scene[data-profile='latency'] .recommendation-lines i {
+    transform-origin: left;
+    animation: loading-cue 650ms var(--ease-out) both;
+  }
+
+  @keyframes loading-cue {
+    from {
+      transform: scaleX(0.7);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .setup-ready {
+    transition:
+      border-color 500ms,
+      color 500ms;
+  }
+
+  .scene-entered .setup-ready {
+    border-color: rgb(200 255 61 / 35%);
+  }
+
+  .scene-entered .route-node::after {
+    animation: connect-x 650ms var(--ease-out) both;
+    transform-origin: left;
+  }
+
+  .scene-entered .endpoint-nodes::before {
+    animation: connect-y 650ms var(--ease-out) 250ms both;
+    transform-origin: top;
+  }
+
+  .scene-entered .endpoint-nodes li::before {
+    animation: connect-x 500ms var(--ease-out) 450ms both;
+    transform-origin: left;
+  }
+
+  @keyframes connect-x {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes connect-y {
+    from {
+      transform: scaleY(0);
+    }
+
+    to {
+      transform: scaleY(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .button,
+  .arrow {
+    transform: none !important;
+  }
+}

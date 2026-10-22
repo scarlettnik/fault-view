@@ -1,0 +1,32 @@
+{
+  "name": "faultview-landing",
+  "version": "1.0.0",
+  "description": "FaultView resilience testing landing with an interactive walkthrough",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:html": "html-validate index.html --max-warnings=0",
+    "lint:css": "stylelint \"styles/**/*.css\" --max-warnings=0",
+    "lint:js": "eslint . --max-warnings=0",
+    "lint": "npm run lint:html && npm run lint:css && npm run lint:js",
+    "check": "npm run format:check && npm run lint",
+    "precommit": "lint-staged --concurrent false",
+    "hooks:install": "git config --local core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.3.0",
+    "globals": "17.7.0",
+    "html-validate": "11.17.0",
+    "lint-staged": "16.4.0",
+    "prettier": "3.8.3",
+    "stylelint": "17.16.0",
+    "stylelint-config-standard": "40.0.0"
+  },
+  "engines": {
+    "node": "^22.22.0 || >=24.8.0"
+  }
+}
