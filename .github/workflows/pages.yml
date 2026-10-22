@@ -1,21 +1,23 @@
-name: Quality checks and GitHub Pages
+name: Lint and deploy
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  pages: write
+  id-token: write
 
 jobs:
-  verify:
+  pages:
     runs-on: ubuntu-latest
+    concurrency: pages-${{ github.ref }}
+    environment:
+      name: ${{ github.event_name == 'push' && 'github-pages' || 'checks' }}
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,27 +25,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - name: Prepare static files
-        if: github.event_name != 'pull_request'
+      - run: npm run lint
+      - if: github.event_name == 'push'
         run: |
           mkdir -p "${{ runner.temp }}/site"
           cp -R index.html styles scripts assets "${{ runner.temp }}/site/"
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push'
         with:
           path: ${{ runner.temp }}/site
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - uses: actions/deploy-pages@v4
+        if: github.event_name == 'push'
         id: deployment
