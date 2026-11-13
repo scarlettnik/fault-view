@@ -41,7 +41,10 @@ export default defineConfig([
     rules: { strict: ['error', 'function'] },
   },
   {
-    files: ['*.{js,mjs}'],
+    files: ['*.{js,mjs}', 'tooling/**/*.mjs'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    ignores: ['dist/**'],
   },
 ]);
