@@ -1,39 +1,59 @@
-name: Lint and deploy
+name: Landing checks and Pages
 
 on:
   push:
     branches: [main]
+    paths:
+      - "apps/landing/**"
+      - ".github/workflows/pages.yml"
+      - "package.json"
   pull_request:
+    paths:
+      - "apps/landing/**"
+      - ".github/workflows/pages.yml"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
-  pages:
+  check:
+    name: Check and package landing
     runs-on: ubuntu-latest
-    concurrency: pages-${{ github.ref }}
-    environment:
-      name: ${{ github.event_name == 'push' && 'github-pages' || 'checks' }}
-      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: landing-checks-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - if: github.event_name == 'push'
-        run: |
-          mkdir -p "${{ runner.temp }}/site"
-          cp -R index.html styles scripts assets "${{ runner.temp }}/site/"
+          cache-dependency-path: apps/landing/package-lock.json
+      - run: npm run setup:landing
+      - run: npm run check:landing
+      - run: npm run build:landing
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
-          path: ${{ runner.temp }}/site
+          path: apps/landing/dist
+
+  deploy:
+    name: Publish landing
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
       - uses: actions/deploy-pages@v4
-        if: github.event_name == 'push'
         id: deployment
