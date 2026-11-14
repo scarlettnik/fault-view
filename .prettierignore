@@ -1,0 +1,13 @@
+node_modules/
+dist/
+site-dist/
+storybook-static/
+.codebase-memory/
+.firecrawl/
+.vercel/
+apps/landing/
+**/package-lock.json
+**/playwright-report/
+**/test-results/
+**/*-snapshots/
+frontend_pro.pdf
