@@ -6,7 +6,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "dev": "node ../../scripts/serve.mjs . 4173",
     "build": "node tooling/build.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "eslint": "10.3.0",
+    "eslint": "10.15.0",
     "globals": "17.7.0",
     "html-validate": "11.17.0",
     "lint-staged": "16.4.0",

@@ -1,9 +1,4 @@
 #!/bin/sh
 set -eu
-
 cd "$(git rev-parse --show-toplevel)"
-
-# Other applications own their checks and do not need landing dependencies.
-if [ -n "$(git diff --cached --name-only --diff-filter=ACMR -- apps/landing/)" ]; then
-  npm run precommit
-fi
+npm run precommit
