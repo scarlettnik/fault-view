@@ -1,0 +1,54 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Storefront",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://storefront.example"
+    }
+  ],
+  "paths": {
+    "/api/products": {
+      "get": {
+        "operationId": "products",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/cart": {
+      "get": {
+        "operationId": "cart",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "operationId": "profile",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/recommendations": {
+      "get": {
+        "operationId": "recommendations",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
