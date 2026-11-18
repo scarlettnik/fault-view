@@ -1,49 +1,53 @@
-name: Landing checks and Pages
+name: Quality and Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "apps/landing/**"
-      - ".github/workflows/pages.yml"
-      - "package.json"
   pull_request:
-    paths:
-      - "apps/landing/**"
-      - ".github/workflows/pages.yml"
-      - "package.json"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: Check and package landing
-    runs-on: ubuntu-latest
+  quality:
+    name: Verify frontend MVP
+    runs-on: ubuntu-24.04
     concurrency:
-      group: landing-checks-${{ github.ref }}
+      group: quality-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: apps/landing/package-lock.json
-      - run: npm run setup:landing
-      - run: npm run check:landing
-      - run: npm run build:landing
-      - uses: actions/upload-pages-artifact@v3
+          cache-dependency-path: |
+            apps/frontend/package-lock.json
+            apps/landing/package-lock.json
+      - run: npm run setup
+      - run: npm --prefix apps/frontend exec -- playwright install --with-deps chromium
+      - run: npm run verify
+        env:
+          SITE_BASE_PATH: /${{ github.event.repository.name }}/
+          STORYBOOK_DISABLE_TELEMETRY: '1'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: |
+            apps/frontend/test-results
+            apps/frontend/playwright-report
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v4
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
-          path: apps/landing/dist
+          path: site-dist
 
   deploy:
-    name: Publish landing
-    needs: check
+    name: Publish Pages
+    needs: quality
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -57,3 +61,13 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Check published applications
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for path in "" "app/" "storybook/" "storybook/iframe.html"; do
+            curl --fail --silent --show-error --location \
+              --retry 5 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 10 --max-time 30 \
+              --output /dev/null "${SITE_URL%/}/$path"
+          done
