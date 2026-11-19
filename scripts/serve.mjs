@@ -26,8 +26,13 @@ export function serve(directory, port, options = {}) {
         response.writeHead(404).end('Not found');
         return;
       }
-      const path = resolve(root, `./${decodeURIComponent(pathname.slice(basePath.length))}`);
-      if (path !== root && !path.startsWith(root + sep)) {
+      const examples = options.examplesDirectory && pathname.startsWith('/examples/');
+      const contentRoot = examples ? resolve(options.examplesDirectory) : root;
+      const relative = examples
+        ? pathname.slice('/examples/'.length)
+        : pathname.slice(basePath.length);
+      const path = resolve(contentRoot, `./${decodeURIComponent(relative)}`);
+      if (path !== contentRoot && !path.startsWith(contentRoot + sep)) {
         response.writeHead(403).end();
         return;
       }

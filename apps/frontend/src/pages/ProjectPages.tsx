@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate, useOutletContext, useParams } from 'react-ro
 import { useAppDispatch, useAppSelector } from '../store';
 import { projectSaved } from '../store/workspace';
 import { selectProjectCount, selectProjectById } from '../store/selectors';
-import { type Project, type ProjectInput } from '../core/model';
+import { type Project, type ProjectInput, type UiChecks } from '../core/model';
 import { EmptyState, Notice, PageHeading } from '../components/ui';
 import { ProjectForm } from '../components/ProjectForm';
 
@@ -33,7 +33,7 @@ export function NewProjectPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const count = useAppSelector(selectProjectCount);
-  function save(input: ProjectInput) {
+  function save(input: ProjectInput & { checks?: UiChecks }) {
     if (count >= 30) return;
     const id = crypto.randomUUID();
     dispatch(
@@ -70,7 +70,7 @@ export function SettingsPage() {
       state.workspace.active?.projectId === project.id ||
       state.workspace.activeRun?.projectId === project.id,
   );
-  function save(input: ProjectInput) {
+  function save(input: ProjectInput & { checks?: UiChecks }) {
     const changed =
       input.frontendUrl !== project.frontendUrl || input.specification !== project.specification;
     dispatch(

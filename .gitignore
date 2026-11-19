@@ -28,5 +28,6 @@ storybook-static/
 .firecrawl/
 .vercel/
 site-dist/
+apps/backend/data/
 examples/open-source/sources/
 examples/open-source/.runtime/

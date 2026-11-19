@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppSelector } from '../store';
 import { Busy, Notice } from './ui';
+import { browserChecksEnabled } from '../core/runner';
 
 export function WorkspaceShell() {
   const match = useMatch('/projects/:projectId/*');
@@ -127,7 +128,7 @@ export function WorkspaceShell() {
           </div>
           <span className="connection online">
             <span className="status-dot" />
-            Локальная симуляция
+            {browserChecksEnabled ? 'Playwright' : 'Локальная симуляция'}
           </span>
         </header>
         <main id="main" tabIndex={-1}>

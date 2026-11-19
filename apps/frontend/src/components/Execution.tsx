@@ -18,6 +18,7 @@ import {
 import { MAX_RUN_CASES, planExecutionProblem, previewPlan } from '../core/planning';
 import { useAppDispatch, useAppSelector } from '../store';
 import { Busy, Notice, StatusBadge } from './ui';
+import { CaseEvidence } from './CaseEvidence';
 
 export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId: string }) {
   const { prepare, isPreparing } = usePreparedPlan(projectId);
@@ -95,91 +96,6 @@ export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId:
   );
 }
 
-function ScenarioPreview({ state }: { state: CaseResult['previewState'] }) {
-  return (
-    <div className={`scenario-preview ${state}`} aria-label="Предпросмотр локального сценария">
-      <h3>
-        {state === 'ready'
-          ? 'Каталог'
-          : state === 'loading'
-            ? 'Загрузка данных…'
-            : state === 'fallback'
-              ? 'Резервное состояние'
-              : 'Данные недоступны'}
-      </h3>
-      {state === 'ready' ? (
-        <ul>
-          <li>Studio headphones</li>
-          <li>Mechanical keyboard</li>
-          <li>Portable speaker</li>
-        </ul>
-      ) : (
-        <p>
-          {state === 'loading'
-            ? 'Сценарий незавершённой загрузки'
-            : state === 'fallback'
-              ? 'Основное содержимое доступно, рекомендации скрыты.'
-              : 'Сценарий обработанной ошибки API'}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CaseEvidence({ result }: { result: CaseResult }) {
-  return (
-    <section className="case-evidence" aria-label="Доказательства проверки">
-      <div className="section-heading">
-        <div>
-          <h2>
-            <code>{result.routeId}</code> · {profileInfo[result.profile].name}
-          </h2>
-          <p className="muted">
-            <code>{result.endpointId}</code>
-          </p>
-        </div>
-        <span className={`verdict ${result.verdict.toLowerCase()}`}>{result.verdict}</span>
-      </div>
-      <p className="evidence-reason">{result.reason}</p>
-      {result.verdict !== 'SKIP' ? <ScenarioPreview state={result.previewState} /> : null}
-      <div className="assertion-results">
-        <h3>Почему получен этот результат</h3>
-        {result.assertions.map((assertion) => (
-          <article key={assertion.id} className={`assertion-result ${assertion.status}`}>
-            <span className="assertion-status">
-              {
-                {
-                  passed: 'ПРОЙДЕНО',
-                  failed: 'НЕ ПРОЙДЕНО',
-                  warning: 'ВНИМАНИЕ',
-                  skipped: 'НЕ ПРОВЕРЕНО',
-                }[assertion.status]
-              }
-            </span>
-            <div>
-              <h4>{assertion.label}</h4>
-              <p>{assertion.actual}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-      <div className="network-evidence">
-        <h3>События сценария</h3>
-        {result.network.map((event, index) => (
-          <div key={index}>
-            <code>{event.endpointId}</code>
-            <span className={event.failed || (event.status ?? 0) >= 400 ? 'network-failed' : ''}>
-              {event.failed ? 'Обрыв запроса' : `HTTP ${event.status}`} ·{' '}
-              {event.phase === 'restored' ? 'после восстановления' : 'проверка профиля'}
-            </span>
-          </div>
-        ))}
-        {!result.network.length ? <p className="muted">Запросы не зафиксированы.</p> : null}
-      </div>
-    </section>
-  );
-}
-
 export function RunReport({ run, projectId }: { run: TestRun; projectId: string }) {
   const [selection, setSelection] = useState<string>();
   const [filter, setFilter] = useState('all');
@@ -237,7 +153,9 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
   return (
     <>
       <Notice>
-        Локальная симуляция. Результаты относятся к учебному сценарию, а не к внешнему приложению.
+        {run.source === 'playwright'
+          ? 'Браузерная проверка Playwright. Результаты, запросы и снимки получены при открытии проверяемого приложения.'
+          : 'Локальная симуляция. Результаты относятся к учебному сценарию, а не к внешнему приложению.'}
       </Notice>
       <div className="run-header">
         <div>
@@ -395,7 +313,7 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
               ))}
             </select>
           </label>
-          <CaseEvidence result={selected} />
+          <CaseEvidence result={selected} run={run} />
         </>
       ) : (
         <p role="status" className="matrix-empty">
