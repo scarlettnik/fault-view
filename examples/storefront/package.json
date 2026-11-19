@@ -1,0 +1,6 @@
+{
+  "name": "faultview-storefront",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node server.mjs" }
+}

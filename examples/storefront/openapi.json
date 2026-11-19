@@ -1,0 +1,11 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Storefront API", "version": "1.0.0", "description": "Локальный учебный магазин для FaultView." },
+  "servers": [{ "url": "http://127.0.0.1:4400" }],
+  "paths": {
+    "/api/products": { "get": { "operationId": "getProducts", "responses": { "200": { "description": "Каталог", "links": { "recommendations": { "operationId": "getRecommendations" } } } } } },
+    "/api/recommendations": { "get": { "operationId": "getRecommendations", "responses": { "200": { "description": "Рекомендации" } } } },
+    "/api/cart": { "get": { "operationId": "getCart", "responses": { "200": { "description": "Корзина", "links": { "products": { "operationId": "getProducts" } } } } } },
+    "/api/profile": { "get": { "operationId": "getProfile", "responses": { "200": { "description": "Профиль покупателя" } } } }
+  }
+}

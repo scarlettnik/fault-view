@@ -5,6 +5,8 @@ const prefix = (process.env.SITE_BASE_PATH ?? '/').replace(/\/?$/, '/');
 if (!prefix.startsWith('/') || !/^[/a-zA-Z0-9_.-]+$/.test(prefix))
   throw new Error('SITE_BASE_PATH must be an absolute URL path');
 const appBase = `${prefix}app/`;
+const examples = spawnSync('npm', ['run', 'build:examples'], { stdio: 'inherit' });
+if (examples.status !== 0) process.exit(examples.status ?? 1);
 for (const application of ['landing', 'frontend']) {
   const result = spawnSync('npm', ['--prefix', `apps/${application}`, 'run', 'build'], {
     stdio: 'inherit',
@@ -19,6 +21,7 @@ await mkdir('site-dist', { recursive: true });
 await cp('apps/landing/dist', 'site-dist', { recursive: true });
 await cp('apps/frontend/dist', 'site-dist/app', { recursive: true });
 await cp('apps/frontend/storybook-static', 'site-dist/storybook', { recursive: true });
+await cp('examples/open-source/.runtime/dist', 'site-dist/examples', { recursive: true });
 const landing = await readFile('site-dist/index.html', 'utf8');
 await writeFile('site-dist/index.html', landing.replaceAll('href="app/"', `href="${appBase}"`));
 await writeFile('site-dist/.nojekyll', '');

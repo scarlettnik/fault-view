@@ -1,6 +1,7 @@
 import { parseDocument } from 'yaml';
 import { z } from 'zod';
 import type { CaseResult, Graph, Plan, Profile } from './model';
+import examples from '../../../../examples/projects.json' with { type: 'json' };
 
 const documentSchema = z.object({
   openapi: z.string().regex(/^3\.[01]\./),
@@ -88,6 +89,36 @@ export function parseLocalSpecification(source: string) {
 
 export function createLocalGraph(source: string, maxPages: number): Graph {
   const catalog = parseLocalSpecification(source);
+  const fixture = examples.find((example) => example.name === catalog.title);
+  if (fixture && fixture.id !== 'storefront') {
+    const routes = fixture.routes.slice(0, maxPages);
+    return {
+      ...catalog,
+      routes: routes.map((route) => ({
+        id: `/${route}`,
+        url: `/${route}`,
+        status: 'visited' as const,
+      })),
+      routeDependencies: routes.flatMap((route) =>
+        catalog.endpoints.map((endpoint) => ({
+          routeId: `/${route}`,
+          endpointId: endpoint.id,
+          provenance: 'local-fixture' as const,
+        })),
+      ),
+      warnings: [
+        ...catalog.warnings,
+        'Локальный учебный план: связи заданы сценарием; внешнее приложение не обходилось. Оригинальный frontend доступен отдельно в библиотеке примеров.',
+      ],
+      coverage: {
+        visitedPages: routes.length,
+        pendingPages: fixture.routes.length - routes.length,
+        maxPages,
+        complete: routes.length === fixture.routes.length,
+        scope: 'local-simulation',
+      },
+    };
+  }
   const sample = [
     ['/products', ['/api/products', '/api/recommendations']],
     ['/checkout', ['/api/cart', '/api/recommendations']],

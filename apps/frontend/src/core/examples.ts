@@ -1,4 +1,12 @@
 import type { Project } from './model';
+import projects from '../../../../examples/projects.json' with { type: 'json' };
+
+export const exampleProjects = projects;
+export function exampleUrl(id: string) {
+  const base = new URL(import.meta.env.BASE_URL, window.location.origin);
+  const site = base.pathname.endsWith('/app/') ? new URL('../', base) : base;
+  return new URL(`examples/${id}/`, site).href;
+}
 
 export const exampleSpecification = JSON.stringify(
   {
@@ -16,14 +24,38 @@ export const exampleSpecification = JSON.stringify(
   2,
 );
 
-export function createExampleProject(): Project {
+export function createExampleProject(id = 'storefront'): Project {
+  const example = exampleProjects.find((project) => project.id === id);
+  if (!example) throw new Error('Неизвестный пример.');
+  const specification =
+    id === 'storefront'
+      ? exampleSpecification
+      : JSON.stringify(
+          {
+            openapi: '3.0.3',
+            info: { title: example.name, version: '1.0.0' },
+            paths: Object.fromEntries(
+              example.api.map((path) => [
+                path,
+                {
+                  get: { responses: { '200': { description: 'Демонстрационный ответ API' } } },
+                },
+              ]),
+            ),
+          },
+          null,
+          2,
+        );
   return {
-    id: 'storefront',
-    name: 'Storefront',
-    description: 'Локальный пример: каталог, корзина и профиль.',
-    frontendUrl: 'https://storefront.example',
-    specification: exampleSpecification,
-    specificationName: 'storefront.openapi.json',
+    id: example.id,
+    name: example.name,
+    description:
+      id === 'storefront'
+        ? 'Локальный пример: каталог, корзина и профиль.'
+        : 'Исходный frontend-проект. На Pages используется локальный адаптер API.',
+    frontendUrl: exampleUrl(id),
+    specification,
+    specificationName: `${id}.openapi.json`,
     maxPages: 10,
     createdAt: new Date().toISOString(),
     jobs: [],

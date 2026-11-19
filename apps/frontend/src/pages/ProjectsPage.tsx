@@ -11,7 +11,7 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { projectRemoved, projectSaved } from '../store/workspace';
 import { dateLabel, latestDiscovery, type Project } from '../core/model';
 import { ConfirmDialog, EmptyState, Notice, PageHeading, StatusBadge } from '../components/ui';
-import { createExampleProject } from '../core/examples';
+import { createExampleProject, exampleProjects, exampleUrl } from '../core/examples';
 import { selectProjects } from '../store/selectors';
 
 export function ProjectsPage() {
@@ -22,16 +22,18 @@ export function ProjectsPage() {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState<Project>();
   const [error, setError] = useState('');
-  function openExample() {
-    const existing = projects.find((project) => project.id === 'storefront');
+  function openExample(id = 'storefront') {
+    const existing = projects.find((project) => project.id === id);
     if (!existing) {
       if (projects.length >= 30) {
         setError('Можно сохранить до 30 проектов.');
         return;
       }
-      dispatch(projectSaved(createExampleProject()));
+      dispatch(projectSaved(createExampleProject(id)));
+    } else if (existing.frontendUrl !== exampleUrl(id)) {
+      dispatch(projectSaved({ ...existing, frontendUrl: exampleUrl(id) }));
     }
-    void navigate('/projects/storefront');
+    void navigate(`/projects/${id}`);
   }
   return (
     <>
@@ -55,6 +57,26 @@ export function ProjectsPage() {
         }
       />
       {error ? <Notice kind="error">{error}</Notice> : null}
+      <details className="examples-library" open>
+        <summary>Шесть исходных проектов для демонстрации</summary>
+        <p className="muted">
+          В демо открываются исходные интерфейсы. На GitHub Pages их API заменён локальными
+          ответами; проверки в FaultView остаются учебной симуляцией.
+        </p>
+        <div className="examples-list">
+          {exampleProjects.map((example) => (
+            <article key={example.id}>
+              <h2>{example.name}</h2>
+              <button className="button secondary" onClick={() => openExample(example.id)}>
+                Проверить {example.name}
+              </button>
+              <a href={exampleUrl(example.id)} target="_blank" rel="noreferrer">
+                Открыть исходный frontend ↗
+              </a>
+            </article>
+          ))}
+        </div>
+      </details>
       {projects.length ? (
         <div className="project-grid">
           {projects.map((project) => {

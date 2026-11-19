@@ -11,3 +11,6 @@ apps/landing/
 **/test-results/
 **/*-snapshots/
 frontend_pro.pdf
+examples/open-source/sources/
+examples/open-source/.runtime/
+examples/storefront/
