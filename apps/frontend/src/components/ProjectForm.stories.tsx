@@ -9,4 +9,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Empty: Story = {};
-export const Filled: Story = { args: { initial: createExampleProject() } };
+export const Filled: Story = {
+  args: { initial: { ...createExampleProject(), frontendUrl: 'https://storefront.example' } },
+};
