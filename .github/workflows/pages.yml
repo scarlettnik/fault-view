@@ -24,6 +24,7 @@ jobs:
           cache-dependency-path: |
             apps/frontend/package-lock.json
             apps/landing/package-lock.json
+            examples/package-lock.json
       - run: npm run setup
       - run: npm --prefix apps/frontend exec -- playwright install --with-deps chromium
       - run: npm run verify
@@ -37,6 +38,7 @@ jobs:
           path: |
             apps/frontend/test-results
             apps/frontend/playwright-report
+            examples/test-results
           retention-days: 7
       - uses: actions/upload-pages-artifact@v4
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -65,7 +67,9 @@ jobs:
         env:
           SITE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          for path in "" "app/" "storybook/" "storybook/iframe.html"; do
+          for path in "" "app/" "storybook/" "storybook/iframe.html" \
+            "examples/" "examples/storefront/" "examples/petclinic/" "examples/conduit/" \
+            "examples/todo/" "examples/robot-shop/" "examples/react-express-mongodb/"; do
             curl --fail --silent --show-error --location \
               --retry 5 --retry-all-errors --retry-delay 5 \
               --connect-timeout 10 --max-time 30 \
