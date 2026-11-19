@@ -1,0 +1,13 @@
+{
+  "name": "faultview-examples",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node tooling/setup.mjs",
+    "build": "node tooling/build.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

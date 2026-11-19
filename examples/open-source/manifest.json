@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "retrieved_on": "2026-11-15",
+  "components": [
+    {
+      "id": "petclinic-frontend",
+      "repo": "spring-petclinic/spring-petclinic-angular",
+      "license": "MIT",
+      "license_note": "Лицензия объявлена в upstream package.json; отдельного LICENSE в корне нет.",
+      "revision": "487dac37b21c46543774c063fc930e972bfda13e",
+      "url": "https://github.com/spring-petclinic/spring-petclinic-angular",
+      "archived": false
+    },
+    {
+      "id": "petclinic-backend",
+      "repo": "spring-petclinic/spring-petclinic-rest",
+      "license": "Apache-2.0",
+      "revision": "0515ec8b57e7708d99d7a1315638d81d3f2c9ead",
+      "url": "https://github.com/spring-petclinic/spring-petclinic-rest",
+      "archived": false
+    },
+    {
+      "id": "conduit",
+      "repo": "TonyMckes/conduit-realworld-example-app",
+      "license": "MIT",
+      "revision": "5e127d8569b300e0a21dc2c20ea680da4967b1aa",
+      "url": "https://github.com/TonyMckes/conduit-realworld-example-app",
+      "archived": false
+    },
+    {
+      "id": "todo",
+      "repo": "zbaharyilmaz/fullstack-todo-app",
+      "license": "MIT",
+      "revision": "20bd629a8e00f5843ec6505c69332f14525abc30",
+      "url": "https://github.com/zbaharyilmaz/fullstack-todo-app",
+      "archived": false
+    },
+    {
+      "id": "robot-shop",
+      "repo": "instana/robot-shop",
+      "license": "Apache-2.0",
+      "revision": "55292e2199f2fb00a165b1f7d3045fe7f8922038",
+      "url": "https://github.com/instana/robot-shop",
+      "archived": true
+    },
+    {
+      "id": "docker-compose-samples",
+      "repo": "docker/awesome-compose",
+      "license": "CC0-1.0",
+      "revision": "30f4b7f6a6c3b0c0ecf4d4efb0de203c48d11562",
+      "url": "https://github.com/docker/awesome-compose",
+      "archived": false
+    }
+  ],
+  "examples": [
+    {
+      "id": "petclinic",
+      "name": "Spring Petclinic",
+      "components": ["petclinic-frontend", "petclinic-backend"]
+    },
+    {
+      "id": "conduit",
+      "name": "Conduit / RealWorld",
+      "components": ["conduit"]
+    },
+    {
+      "id": "todo",
+      "name": "Fullstack Todo",
+      "components": ["todo"]
+    },
+    {
+      "id": "robot-shop",
+      "name": "Stan's Robot Shop",
+      "components": ["robot-shop"]
+    },
+    {
+      "id": "react-express-mongodb",
+      "name": "React + Express + MongoDB (Docker Samples)",
+      "components": ["docker-compose-samples"],
+      "source_subdirectory": "react-express-mongodb"
+    }
+  ]
+}

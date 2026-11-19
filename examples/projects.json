@@ -1,0 +1,44 @@
+[
+  {
+    "id": "storefront",
+    "name": "Storefront",
+    "source": "",
+    "routes": ["products", "checkout", "account"],
+    "api": ["/api/products", "/api/cart", "/api/profile", "/api/recommendations"]
+  },
+  {
+    "id": "petclinic",
+    "name": "Spring Petclinic",
+    "source": "https://github.com/spring-petclinic/spring-petclinic-angular",
+    "routes": ["owners", "vets"],
+    "api": ["/api/owners", "/api/vets", "/api/pets"]
+  },
+  {
+    "id": "conduit",
+    "name": "Conduit / RealWorld",
+    "source": "https://github.com/TonyMckes/conduit-realworld-example-app",
+    "routes": ["articles", "tags"],
+    "api": ["/api/articles", "/api/tags", "/api/user"]
+  },
+  {
+    "id": "todo",
+    "name": "Fullstack Todo",
+    "source": "https://github.com/zbaharyilmaz/fullstack-todo-app",
+    "routes": ["tutorials"],
+    "api": ["/api/tutorials"]
+  },
+  {
+    "id": "robot-shop",
+    "name": "Stan's Robot Shop",
+    "source": "https://github.com/instana/robot-shop",
+    "routes": ["catalogue", "cart"],
+    "api": ["/api/catalogue/categories", "/api/catalogue/products", "/api/cart/cart/anonymous-demo"]
+  },
+  {
+    "id": "react-express-mongodb",
+    "name": "React + Express + MongoDB",
+    "source": "https://github.com/docker/awesome-compose/tree/master/react-express-mongodb",
+    "routes": ["tasks"],
+    "api": ["/api", "/api/todos"]
+  }
+]
