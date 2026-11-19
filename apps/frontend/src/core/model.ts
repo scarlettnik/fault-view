@@ -70,7 +70,7 @@ export const graphSchema = z.object({
     z.object({
       routeId: z.string(),
       endpointId: z.string(),
-      provenance: z.literal('local-fixture'),
+      provenance: z.enum(['local-fixture', 'browser-network']),
     }),
   ),
   coverage: z.object({
@@ -78,11 +78,12 @@ export const graphSchema = z.object({
     pendingPages: z.number(),
     maxPages: z.number(),
     complete: z.boolean(),
-    scope: z.literal('local-simulation'),
+    scope: z.enum(['local-simulation', 'public-linked-pages']),
   }),
 });
 export type Graph = z.infer<typeof graphSchema>;
 export const jobSchema = z.object({
+  source: z.enum(['simulation', 'playwright']).optional(),
   id: z.string(),
   status: z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']),
   progress: z.object({ completed: z.number(), discovered: z.number() }),
@@ -107,7 +108,7 @@ export const planSchema = z.object({
       routeId: z.string(),
       endpointId: z.string(),
       profile: profileSchema,
-      basis: z.enum(['local-fixture', 'declared-link']),
+      basis: z.enum(['local-fixture', 'browser-network', 'declared-link']),
     }),
   ),
   excludedRouteIds: z.array(z.string()),
@@ -123,6 +124,28 @@ export const savedPlanSchema = z.object({
 });
 export type SavedPlan = z.infer<typeof savedPlanSchema>;
 export const verdicts = ['PASS', 'WARN', 'FAIL', 'SKIP', 'ERROR'] as const;
+export const checksSchema = z.object({
+  readySelector: z.string().max(500).default(''),
+  errorSelector: z.string().max(500).default(''),
+  degradedSelector: z.string().max(500).default(''),
+});
+export type UiChecks = z.infer<typeof checksSchema>;
+export const defaultChecks: UiChecks = {
+  readySelector: '',
+  errorSelector: '',
+  degradedSelector: '',
+};
+const uiSummarySchema = z.object({
+  contentCharacters: z.number(),
+  headings: z.number(),
+  enabledControls: z.number(),
+  loading: z.boolean(),
+  pendingRequests: z.number(),
+  pageErrors: z.number(),
+  navigationOk: z.boolean(),
+  navigationLinks: z.number().optional(),
+  retryControls: z.number().optional(),
+});
 export const caseResultSchema = z.object({
   id: z.string(),
   routeId: z.string(),
@@ -136,10 +159,31 @@ export const caseResultSchema = z.object({
       endpointId: z.string(),
       status: z.number().optional(),
       failed: z.boolean().optional(),
+      pending: z.boolean().optional(),
       phase: z.enum(['fault', 'restored']),
     }),
   ),
-  source: z.literal('simulation'),
+  source: z.enum(['simulation', 'playwright']),
+  observedRequests: z.number().default(0),
+  injectedRequests: z.number().default(0),
+  checks: z.object({ ready: z.boolean(), error: z.boolean(), degraded: z.boolean() }).optional(),
+  consoleErrors: z.number().default(0),
+  pageErrors: z.number().default(0),
+  pageErrorMessages: z.array(z.string()).default([]),
+  screenshot: z
+    .string()
+    .regex(/^\d+-(baseline|fault|final)$/)
+    .optional(),
+  baselineScreenshot: z
+    .string()
+    .regex(/^\d+-baseline$/)
+    .optional(),
+  faultScreenshot: z
+    .string()
+    .regex(/^\d+-fault$/)
+    .optional(),
+  baseline: uiSummarySchema.optional(),
+  observedUi: uiSummarySchema.optional(),
   previewState: z.enum(['ready', 'unavailable', 'loading', 'fallback']).default('ready'),
   recovered: z.boolean().optional(),
   assertions: z
@@ -156,7 +200,10 @@ export const caseResultSchema = z.object({
 });
 export type CaseResult = z.infer<typeof caseResultSchema>;
 export const runSchema = z.object({
-  source: z.literal('simulation'),
+  source: z.enum(['simulation', 'playwright']),
+  remoteId: z.uuid().optional(),
+  runnerUrl: z.string().url().max(2048).optional(),
+  checks: checksSchema.optional(),
   id: z.string(),
   createdAt: z.string(),
   status: z.enum(['queued', 'running', 'completed', 'cancelled', 'failed']),
@@ -168,6 +215,7 @@ export const runSchema = z.object({
 });
 export type TestRun = z.infer<typeof runSchema>;
 export const projectSchema = projectInputSchema.extend({
+  checks: checksSchema.optional(),
   id: z.string(),
   createdAt: z.string(),
   jobs: z.array(jobSchema).max(20),

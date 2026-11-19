@@ -1,3 +1,4 @@
+import { browserChecksEnabled } from '../core/runner';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileCodeIcon, GlobeIcon, PlayIcon, StopIcon } from '@phosphor-icons/react';
@@ -84,6 +85,16 @@ export function OverviewPage() {
         </div>
         <span className="muted">До {project.maxPages} страниц</span>
       </div>
+      <Notice>
+        {browserChecksEnabled
+          ? 'Playwright: обход приложения, проверка интерфейса и скриншоты.'
+          : 'Учебная симуляция. Для проверки сайта со скриншотами запустите npm run dev:all локально.'}
+      </Notice>
+      {browserChecksEnabled && graph?.coverage.scope === 'local-simulation' ? (
+        <Notice>
+          Обновите граф, чтобы получить реальные страницы и запросы для проверки Playwright.
+        </Notice>
+      ) : null}
       {error ? <Notice kind="error">{error}</Notice> : null}
       {current?.error ? <Notice kind="error">{current.error.message}</Notice> : null}
       {current ? (
@@ -107,7 +118,11 @@ export function OverviewPage() {
         </section>
       ) : null}
       {graph ? (
-        <section aria-label="Локальный граф">
+        <section
+          aria-label={
+            graph.coverage.scope === 'public-linked-pages' ? 'Граф приложения' : 'Локальный граф'
+          }
+        >
           <dl className="metric-strip">
             <div>
               <dt>СТРАНИЦ</dt>
@@ -129,7 +144,9 @@ export function OverviewPage() {
           {!graph.routeDependencies.length ? (
             <Notice>
               {graph.coverage.visitedPages
-                ? 'Нет связей в локальном сценарии.'
+                ? graph.coverage.scope === 'public-linked-pages'
+                  ? 'Запросы API из спецификации не обнаружены. Проверьте адреса servers в OpenAPI.'
+                  : 'Нет связей в локальном сценарии.'
                 : 'В сценарии нет страниц.'}
             </Notice>
           ) : null}
@@ -154,7 +171,7 @@ export function OverviewPage() {
           />
           {graph.warnings.length ? (
             <details className="check-settings">
-              <summary>Данные сценария ({graph.warnings.length})</summary>
+              <summary>Предупреждения ({graph.warnings.length})</summary>
               <ul className="warning-list">
                 {graph.warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
@@ -165,7 +182,9 @@ export function OverviewPage() {
         </section>
       ) : !running ? (
         <p className="muted overview-empty">
-          Постройте граф учебного сценария по загруженной спецификации.
+          {browserChecksEnabled
+            ? 'Постройте граф: Playwright откроет приложение и найдёт его запросы API.'
+            : 'Постройте граф учебного сценария по загруженной спецификации.'}
         </p>
       ) : null}
     </>

@@ -66,26 +66,54 @@ self.addEventListener('fetch', (event) => {
       if (isControl)
         return stateFor(id, async () => {
           const fault = url.searchParams.get('fault');
-          faults.set(
-            event.clientId,
-            [
-              'healthy',
-              'latency',
-              'http500',
-              'http503',
-              'timeout',
-              'networkError',
-              'recovery',
-            ].includes(fault)
-              ? fault
-              : 'healthy',
-          );
+          const profile = [
+            'healthy',
+            'latency',
+            'http500',
+            'http503',
+            'timeout',
+            'networkError',
+            'recovery',
+          ].includes(fault)
+            ? fault
+            : 'healthy';
+          faults.set(event.clientId, {
+            profile,
+            target: (url.searchParams.get('target') ?? '').slice(0, 2048),
+            live: url.searchParams.get('live') === '1',
+          });
           return json({ ready: true });
         });
       return stateFor(id, async (state) => {
-        const fault = faults.get(event.clientId) ?? 'healthy';
+        const configuration = faults.get(event.clientId) ?? {
+          profile: 'healthy',
+          target: '',
+          live: false,
+        };
+        const path = url.pathname.slice(apiIndex).replace(/\/$/, '');
+        const pattern = configuration.target
+          .split(/(\{[^}]+\})/)
+          .map((part) =>
+            /^\{[^}]+\}$/.test(part) ? '[^/]+' : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          )
+          .join('');
+        const fault =
+          !configuration.target || new RegExp(`^${pattern}$`).test(path)
+            ? configuration.profile
+            : 'healthy';
+        if (fault !== 'healthy')
+          client.postMessage({
+            type: 'faultview:injected',
+            profile: fault,
+            path,
+            method: event.request.method,
+          });
         if (fault === 'networkError') return Response.error();
-        if (fault === 'http500' || fault === 'http503')
+        if (
+          fault === 'http500' ||
+          fault === 'http503' ||
+          (fault === 'recovery' && configuration.live)
+        )
           return json(
             { error: 'Controlled demo failure', errors: { body: ['Controlled demo failure'] } },
             fault === 'http500' ? 500 : 503,
@@ -97,7 +125,8 @@ self.addEventListener('fetch', (event) => {
         }
         if (fault === 'latency' || fault === 'recovery')
           await new Promise((resolve) => setTimeout(resolve, 700));
-        if (fault === 'recovery') faults.set(event.clientId, 'healthy');
+        if (fault === 'recovery')
+          faults.set(event.clientId, { ...configuration, profile: 'healthy' });
         let body = {};
         if (!['GET', 'HEAD'].includes(event.request.method)) {
           try {

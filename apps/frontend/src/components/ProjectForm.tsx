@@ -1,12 +1,13 @@
 import { Button } from './Button';
 import { useState, type SubmitEvent } from 'react';
 import { UploadSimpleIcon, FileCodeIcon } from '@phosphor-icons/react';
-import { projectInputSchema, type ProjectInput } from '../core/model';
+import { defaultChecks, projectInputSchema, type ProjectInput, type UiChecks } from '../core/model';
+import { browserChecksEnabled } from '../core/runner';
 import { parseLocalSpecification } from '../core/localEngine';
 
 interface Props {
-  initial?: ProjectInput;
-  onSave: (input: ProjectInput) => void;
+  initial?: ProjectInput & { checks?: UiChecks };
+  onSave: (input: ProjectInput & { checks?: UiChecks }) => void;
 }
 export function ProjectForm({ initial, onSave }: Props) {
   const [form, setForm] = useState({
@@ -20,6 +21,7 @@ export function ProjectForm({ initial, onSave }: Props) {
     source: initial?.specification ?? '',
   });
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [checks, setChecks] = useState(initial?.checks ?? defaultChecks);
   const [fileError, setFileError] = useState('');
   const [reading, setReading] = useState(false);
   async function readFile(value?: File) {
@@ -69,7 +71,7 @@ export function ProjectForm({ initial, onSave }: Props) {
       return;
     }
     setFields({});
-    onSave(parsed.data);
+    onSave({ ...parsed.data, ...(browserChecksEnabled || initial?.checks ? { checks } : {}) });
   }
   return (
     <form className="project-form" onSubmit={submit} noValidate>
@@ -160,8 +162,39 @@ export function ProjectForm({ initial, onSave }: Props) {
           aria-invalid={!!fields.maxPages}
         />
         <span className="field-error">{fields.maxPages}</span>
-        <span className="muted">От 1 до 20 страниц локального сценария.</span>
+        <span className="muted">
+          {browserChecksEnabled
+            ? 'От 1 до 20 страниц приложения.'
+            : 'От 1 до 20 страниц локального сценария.'}
+        </span>
       </div>
+      {browserChecksEnabled ? (
+        <details className="check-settings">
+          <summary>Дополнительные проверки интерфейса</summary>
+          <p className="muted">
+            Контент, загрузка, ошибки JavaScript и доступность данных проверяются автоматически.
+            Можно дополнить их CSS-селекторами.
+          </p>
+          {(
+            [
+              ['readySelector', 'Готовность интерфейса', 'Например, [data-testid="content"]'],
+              ['errorSelector', 'Сообщение об ошибке', 'Например, [role="alert"]'],
+              ['degradedSelector', 'Ограниченная работа', 'Например, [data-state="fallback"]'],
+            ] as const
+          ).map(([name, label, placeholder]) => (
+            <div className="field" key={name}>
+              <label htmlFor={`check-${name}`}>{label}</label>
+              <input
+                id={`check-${name}`}
+                maxLength={500}
+                value={checks[name]}
+                placeholder={placeholder}
+                onChange={(event) => setChecks({ ...checks, [name]: event.target.value })}
+              />
+            </div>
+          ))}
+        </details>
+      ) : null}
       <div className="form-actions">
         <Button type="submit" busy={reading}>
           Сохранить проект

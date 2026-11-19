@@ -1,8 +1,12 @@
 import type { Project } from './model';
 import projects from '../../../../examples/projects.json' with { type: 'json' };
+import { browserChecksEnabled } from './runner';
 
 export const exampleProjects = projects;
 export function exampleUrl(id: string) {
+  const examplesOrigin = import.meta.env.VITE_EXAMPLES_ORIGIN as string | undefined;
+  if (examplesOrigin)
+    return new URL(`examples/${id}/`, `${examplesOrigin.replace(/\/$/, '')}/`).href;
   const base = new URL(import.meta.env.BASE_URL, window.location.origin);
   const site = base.pathname.endsWith('/app/') ? new URL('../', base) : base;
   return new URL(`examples/${id}/`, site).href;
@@ -27,7 +31,7 @@ export const exampleSpecification = JSON.stringify(
 export function createExampleProject(id = 'storefront'): Project {
   const example = exampleProjects.find((project) => project.id === id);
   if (!example) throw new Error('Неизвестный пример.');
-  const specification =
+  let specification =
     id === 'storefront'
       ? exampleSpecification
       : JSON.stringify(
@@ -46,6 +50,16 @@ export function createExampleProject(id = 'storefront'): Project {
           null,
           2,
         );
+  if (browserChecksEnabled) {
+    const schema = JSON.parse(specification) as { servers?: { url: string }[] };
+    schema.servers = [
+      {
+        url:
+          id === 'storefront' ? new URL(exampleUrl(id)).origin : exampleUrl(id).replace(/\/$/, ''),
+      },
+    ];
+    specification = JSON.stringify(schema, null, 2);
+  }
   return {
     id: example.id,
     name: example.name,

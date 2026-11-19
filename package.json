@@ -3,10 +3,10 @@
   "private": true,
   "description": "FaultView stage 3: static landing and autonomous React MVP",
   "scripts": {
-    "setup": "npm --prefix apps/frontend ci && npm --prefix apps/landing ci && npm --prefix examples ci --ignore-scripts && npm run hooks:install && npm run setup:examples",
+    "setup": "npm --prefix apps/frontend ci && npm --prefix apps/landing ci && npm --prefix examples ci --ignore-scripts && npm --prefix apps/backend ci && npm --prefix apps/backend run browser:install && npm run hooks:install && npm run setup:examples",
     "setup:examples": "npm --prefix examples run setup",
     "build:examples": "npm --prefix examples run build",
-    "dev:all": "npm run build && npm run preview",
+    "dev:all": "node scripts/dev.mjs --all",
     "dev": "node scripts/dev.mjs",
     "start:all": "bash scripts/start-all.sh",
     "dev:frontend": "npm --prefix apps/frontend run dev",
@@ -27,11 +27,13 @@
     "test:e2e": "npm --prefix apps/frontend run test:e2e",
     "test:visual": "npm --prefix apps/frontend run test:visual",
     "test:visual:update": "npm --prefix apps/frontend run test:visual:update",
-    "verify": "npm run check && npm run build && npm run test:site && npm run test:examples && npm run test:e2e && npm run test:visual",
+    "verify": "npm run check && npm run check:runner && npm run build && npm run test:site && npm run test:examples && npm run test:e2e && npm run test:visual",
     "hooks:install": "node scripts/install-hooks.mjs",
     "lint:scripts": "node apps/frontend/node_modules/eslint/bin/eslint.js scripts examples/tooling examples/pages examples/tests examples/playwright.config.js eslint.config.mjs --max-warnings=0",
     "test:site": "npm --prefix apps/frontend run test:site",
-    "test:examples": "npm --prefix examples test"
+    "test:examples": "npm --prefix examples test",
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "check:runner": "npm --prefix apps/backend run typecheck"
   },
   "engines": {
     "node": "^22.22.0 || >=24.8.0"

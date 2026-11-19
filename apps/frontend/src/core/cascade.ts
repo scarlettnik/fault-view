@@ -75,7 +75,7 @@ export function buildPlan(graph: DependencyGraph, input: PlanInput) {
     routeId: string;
     endpointId: string;
     profile: PlanInput['profiles'][number];
-    basis: 'local-fixture' | 'declared-link';
+    basis: 'local-fixture' | 'browser-network' | 'declared-link';
   }[] = [];
   for (const routeId of affected.filter((id) => !excluded.has(id))) {
     const observed = new Set(
@@ -90,7 +90,11 @@ export function buildPlan(graph: DependencyGraph, input: PlanInput) {
           routeId,
           endpointId,
           profile,
-          basis: observed.has(endpointId) ? 'local-fixture' : 'declared-link',
+          basis: observed.has(endpointId)
+            ? (graph.routeDependencies.find(
+                (edge) => edge.routeId === routeId && edge.endpointId === endpointId,
+              )?.provenance ?? 'local-fixture')
+            : 'declared-link',
         });
       }
     }

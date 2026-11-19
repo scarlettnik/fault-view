@@ -3,6 +3,13 @@ import { createLocalGraph, simulateCase } from '../core/localEngine';
 import { buildPlan, planExecutionProblem } from '../core/cascade';
 import { latestDiscovery, type Job, type PlanInput, type TestRun } from '../core/model';
 import { jobReceived, runReceived, type Workspace } from './workspace';
+import {
+  browserChecksEnabled,
+  parseRemoteJob,
+  parseRemoteRun,
+  runnerRequest,
+  runnerUrl,
+} from '../core/runner';
 
 type State = { workspace: Workspace };
 const controllers = new Map<string, AbortController>();
@@ -33,6 +40,7 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
       throw new Error('Дождитесь завершения текущей операции.');
     let job: Job = {
       id: api.requestId,
+      source: browserChecksEnabled ? 'playwright' : 'simulation',
       createdAt: new Date().toISOString(),
       status: 'running',
       progress: { completed: 0, discovered: project.maxPages },
@@ -51,7 +59,30 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
       { once: true },
     );
     api.dispatch(jobReceived({ projectId, job }));
+    let remoteId: string | undefined;
     try {
+      if (browserChecksEnabled) {
+        let remote = parseRemoteJob(
+          await runnerRequest('/discoveries', {
+            method: 'POST',
+            body: JSON.stringify(project),
+            signal: controller.signal,
+          }),
+        );
+        remoteId = remote.id;
+        while (true) {
+          job = { ...remote, id: api.requestId };
+          api.dispatch(jobReceived({ projectId, job }));
+          if (remote.status !== 'running' && remote.status !== 'queued') break;
+          await wait(400, controller.signal);
+          remote = parseRemoteJob(
+            await runnerRequest(`/discoveries/${remoteId}`, { signal: controller.signal }),
+          );
+        }
+        if (job.status === 'failed')
+          throw new Error(job.error?.message ?? 'Не удалось обследовать страницы.');
+        return job;
+      }
       await wait(200, controller.signal);
       const graph = createLocalGraph(project.specification, project.maxPages);
       for (let i = 1; i <= graph.routes.length; i++) {
@@ -81,6 +112,10 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
       );
       throw error;
     } finally {
+      if (controller.signal.aborted && remoteId)
+        await runnerRequest(`/discoveries/${remoteId}`, { method: 'DELETE' }).catch(
+          () => undefined,
+        );
       api.signal.removeEventListener('abort', cancel);
       controllers.delete(key);
     }
@@ -116,17 +151,29 @@ export const executePlan = createAsyncThunk<
   const prepared = buildPlan(job.graph, plan);
   const problem = planExecutionProblem(prepared);
   if (problem) throw new Error(problem.message);
+  if (browserChecksEnabled && job.graph.coverage.scope !== 'public-linked-pages') {
+    throw new Error(
+      'Обновите граф проекта: для Playwright нужны страницы и запросы, найденные браузером.',
+    );
+  }
+  if (!browserChecksEnabled && job.graph.coverage.scope === 'public-linked-pages') {
+    throw new Error(
+      'Этот граф построен Playwright. Откройте локальный проект через npm run dev:all для браузерной проверки.',
+    );
+  }
   let run: TestRun = {
     id: api.requestId,
-    source: 'simulation',
+    source: browserChecksEnabled ? 'playwright' : 'simulation',
     createdAt: new Date().toISOString(),
     status: 'running',
     plan,
     progress: { completed: 0, total: prepared.cases.length },
     results: [],
-    warnings: [
-      'Локальная симуляция: результаты заданы учебным сценарием, сетевые запросы не выполнялись.',
-    ],
+    warnings: browserChecksEnabled
+      ? []
+      : [
+          'Локальная симуляция: результаты заданы учебным сценарием, сетевые запросы не выполнялись.',
+        ],
   };
   const controller = new AbortController();
   const key = `run:${projectId}`;
@@ -144,7 +191,30 @@ export const executePlan = createAsyncThunk<
     { once: true },
   );
   api.dispatch(runReceived({ projectId, run }));
+  let remoteId: string | undefined;
   try {
+    if (browserChecksEnabled) {
+      let remote = parseRemoteRun(
+        await runnerRequest('/runs', {
+          method: 'POST',
+          body: JSON.stringify({ graph: job.graph, plan, checks: project.checks }),
+          signal: controller.signal,
+        }),
+      );
+      remoteId = remote.id;
+      while (true) {
+        run = { ...remote, id: api.requestId, remoteId, runnerUrl };
+        api.dispatch(runReceived({ projectId, run }));
+        if (remote.status !== 'running' && remote.status !== 'queued') break;
+        await wait(400, controller.signal);
+        remote = parseRemoteRun(
+          await runnerRequest(`/runs/${remoteId}`, { signal: controller.signal }),
+        );
+      }
+      if (run.status === 'failed')
+        throw new Error(run.error?.message ?? 'Ошибка браузерной проверки.');
+      return run;
+    }
     for (const [index, test] of prepared.cases.entries()) {
       await wait(90, controller.signal);
       run = {
@@ -165,11 +235,19 @@ export const executePlan = createAsyncThunk<
           ...run,
           status: controller.signal.aborted ? 'cancelled' : 'failed',
           results: [...run.results],
+          error: controller.signal.aborted
+            ? undefined
+            : {
+                code: 'RUN_FAILED',
+                message: error instanceof Error ? error.message : 'Ошибка проверки.',
+              },
         },
       }),
     );
     throw error;
   } finally {
+    if (controller.signal.aborted && remoteId)
+      await runnerRequest(`/runs/${remoteId}`, { method: 'DELETE' }).catch(() => undefined);
     api.signal.removeEventListener('abort', cancel);
     controllers.delete(key);
   }

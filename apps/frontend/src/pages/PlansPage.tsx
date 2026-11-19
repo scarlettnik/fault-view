@@ -88,7 +88,9 @@ export function PlanCases({ saved }: { saved: SavedPlan }) {
                       <span className="muted">
                         {item.basis === 'local-fixture'
                           ? 'Локальный сценарий'
-                          : 'Объявлен в OpenAPI Link'}
+                          : item.basis === 'browser-network'
+                            ? 'Запрос в браузере'
+                            : 'Объявлен в OpenAPI Link'}
                       </span>
                     </td>
                   </tr>

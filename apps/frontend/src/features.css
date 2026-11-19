@@ -655,6 +655,34 @@
   margin: 20px 0;
   min-height: 180px;
 }
+
+.screenshots-section {
+  margin-top: 26px;
+}
+.screenshots-section h3 {
+  font-size: 13px;
+}
+.assertion-summary,
+.screenshot-unavailable {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.assertion-result p + p {
+  margin-top: 8px;
+}
+.evidence-reason,
+.assertion-result p,
+.network-evidence code,
+.case-evidence h2 code {
+  overflow-wrap: anywhere;
+}
+.evidence-screenshot a:focus-visible {
+  display: block;
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
 .scenario-preview h3 {
   font-size: 20px;
   margin-bottom: 20px;

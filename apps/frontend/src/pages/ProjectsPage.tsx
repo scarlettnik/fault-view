@@ -13,6 +13,7 @@ import { dateLabel, latestDiscovery, type Project } from '../core/model';
 import { ConfirmDialog, EmptyState, Notice, PageHeading, StatusBadge } from '../components/ui';
 import { createExampleProject, exampleProjects, exampleUrl } from '../core/examples';
 import { selectProjects } from '../store/selectors';
+import { browserChecksEnabled } from '../core/runner';
 
 export function ProjectsPage() {
   const projects = useAppSelector(selectProjects);
@@ -30,8 +31,15 @@ export function ProjectsPage() {
         return;
       }
       dispatch(projectSaved(createExampleProject(id)));
-    } else if (existing.frontendUrl !== exampleUrl(id)) {
-      dispatch(projectSaved({ ...existing, frontendUrl: exampleUrl(id) }));
+    } else if (existing.frontendUrl !== exampleUrl(id) || browserChecksEnabled) {
+      const example = createExampleProject(id);
+      dispatch(
+        projectSaved({
+          ...existing,
+          frontendUrl: example.frontendUrl,
+          ...(browserChecksEnabled ? { specification: example.specification } : {}),
+        }),
+      );
     }
     void navigate(`/projects/${id}`);
   }
@@ -60,8 +68,9 @@ export function ProjectsPage() {
       <details className="examples-library" open>
         <summary>Шесть исходных проектов для демонстрации</summary>
         <p className="muted">
-          В демо открываются исходные интерфейсы. На GitHub Pages их API заменён локальными
-          ответами; проверки в FaultView остаются учебной симуляцией.
+          {browserChecksEnabled
+            ? 'Проверка исходных интерфейсов в Playwright: отказы API, скриншоты и результаты по пунктам.'
+            : 'В демо открываются исходные интерфейсы. На GitHub Pages их API заменён локальными ответами; проверки в FaultView остаются учебной симуляцией.'}
         </p>
         <div className="examples-list">
           {exampleProjects.map((example) => (

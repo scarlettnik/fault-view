@@ -12,6 +12,12 @@ const profiles = [
   'recovery',
 ];
 const selected = new URL(location.href).searchParams.get('fault') ?? 'healthy';
+const parameters = new URL(location.href).searchParams;
+window.__faultviewInjectionEvents = [];
+navigator.serviceWorker?.addEventListener('message', (event) => {
+  if (event.data?.type === 'faultview:injected' && window.__faultviewInjectionEvents.length < 200)
+    window.__faultviewInjectionEvents.push(event.data);
+});
 const bar = document.createElement('aside');
 bar.setAttribute('aria-label', 'Демонстрационный режим');
 bar.style.cssText =
@@ -70,7 +76,10 @@ try {
     });
   }
   const configured = await fetch(
-    new URL(`_control/${id}?fault=${encodeURIComponent(selected)}`, examplesBase),
+    new URL(
+      `_control/${id}?fault=${encodeURIComponent(selected)}&target=${encodeURIComponent(parameters.get('target') ?? '')}&live=${parameters.get('live') === '1' ? '1' : '0'}`,
+      examplesBase,
+    ),
   );
   if (!configured.ok) throw new Error('Не удалось настроить локальные ответы API.');
   // Replay original application scripts in their original order after the adapter is active.
