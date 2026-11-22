@@ -99,6 +99,7 @@ export function registerProjects(
   auth: ReturnType<typeof createAuth>,
   demo?: Settings,
 ) {
+  const settingsWriteLimit = { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
   app.get('/api/v1/projects', async (request): Promise<ProjectSummary[]> => {
     const user = await auth.requireUser(request);
     const { rows } = await pool.query<
@@ -122,7 +123,7 @@ export function registerProjects(
     }));
   });
 
-  app.post('/api/v1/projects', async (request, reply) => {
+  app.post('/api/v1/projects', settingsWriteLimit, async (request, reply) => {
     const user = await auth.requireUser(request);
     const settings = createSchema.parse(request.body);
     await parseSpecification(settings.specification, settings.frontendUrl);
@@ -149,35 +150,39 @@ export function registerProjects(
     return toProject(pool, await ownedProject(pool, user.id, id));
   });
 
-  app.patch<{ Params: { projectId: string } }>('/api/v1/projects/:projectId', async (request) => {
-    const user = await auth.requireUser(request);
-    const id = z.uuid().parse(request.params.projectId);
-    const update = updateSchema.parse(request.body);
-    return transaction(pool, async (client) => {
-      const row = await ownedProject(client, user.id, id, true);
-      await assertIdle(client, id);
-      const settings = { ...row.settings, ...update };
-      const changed =
-        settings.specification !== row.settings.specification ||
-        settings.frontendUrl !== row.settings.frontendUrl ||
-        settings.maxPages !== row.settings.maxPages;
-      if (changed) {
-        if (row.is_demo)
-          throw new InputError(
-            'Параметры подключения демостенда фиксированы.',
-            'DEMO_SETTINGS_FIXED',
-            409,
-          );
-        await parseSpecification(settings.specification, settings.frontendUrl);
-        settings.excludedRouteIds = [];
-      }
-      const result = await client.query<ProjectRow>(
-        'UPDATE projects SET settings = $3, revision = revision + $4, updated_at = now() WHERE owner_id = $1 AND id = $2 RETURNING *',
-        [user.id, id, settings, Number(changed)],
-      );
-      return toProject(client, result.rows[0]!);
-    });
-  });
+  app.patch<{ Params: { projectId: string } }>(
+    '/api/v1/projects/:projectId',
+    settingsWriteLimit,
+    async (request) => {
+      const user = await auth.requireUser(request);
+      const id = z.uuid().parse(request.params.projectId);
+      const update = updateSchema.parse(request.body);
+      return transaction(pool, async (client) => {
+        const row = await ownedProject(client, user.id, id, true);
+        await assertIdle(client, id);
+        const settings = { ...row.settings, ...update };
+        const changed =
+          settings.specification !== row.settings.specification ||
+          settings.frontendUrl !== row.settings.frontendUrl ||
+          settings.maxPages !== row.settings.maxPages;
+        if (changed) {
+          if (row.is_demo)
+            throw new InputError(
+              'Параметры подключения демостенда фиксированы.',
+              'DEMO_SETTINGS_FIXED',
+              409,
+            );
+          await parseSpecification(settings.specification, settings.frontendUrl);
+          settings.excludedRouteIds = [];
+        }
+        const result = await client.query<ProjectRow>(
+          'UPDATE projects SET settings = $3, revision = revision + $4, updated_at = now() WHERE owner_id = $1 AND id = $2 RETURNING *',
+          [user.id, id, settings, Number(changed)],
+        );
+        return toProject(client, result.rows[0]!);
+      });
+    },
+  );
 
   app.delete<{ Params: { projectId: string } }>(
     '/api/v1/projects/:projectId',

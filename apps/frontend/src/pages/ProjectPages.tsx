@@ -56,6 +56,9 @@ function ServerProjectBoundary({ projectId }: { projectId: string }) {
       abortRequest = request.abort;
       void request
         .unwrap()
+        .then(() => {
+          if (!stopped) setError('');
+        })
         .catch((value: unknown) => {
           if (!stopped) setError(messageFor(value));
         })

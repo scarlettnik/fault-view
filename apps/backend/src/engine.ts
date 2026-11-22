@@ -93,6 +93,11 @@ export class BrowserEngine {
         executablePath: this.config.executablePath,
         chromiumSandbox: this.config.chromiumSandbox,
         args: ['--disable-background-networking', '--disable-quic'],
+        env: {
+          PATH: process.env.PATH ?? '/usr/bin:/bin',
+          HOME: process.env.HOME ?? '/tmp',
+          LANG: process.env.LANG ?? 'C.UTF-8',
+        },
       })
       .catch((error: unknown) => {
         this.browser = undefined;

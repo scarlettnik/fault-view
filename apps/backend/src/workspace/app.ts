@@ -1,7 +1,9 @@
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import serveStatic from '@fastify/static';
 import Fastify from 'fastify';
+import { resolve } from 'node:path';
 import type { Pool } from 'pg';
 import { ZodError } from 'zod';
 import { InputError } from '../types.js';
@@ -16,10 +18,17 @@ export interface WorkspaceConfig {
   secureCookies: boolean;
   demo?: Settings;
   execution?: ExecutionConfig;
+  spaDirectory?: string;
+  trustOneProxy?: boolean;
 }
 
 export async function createWorkspaceApp(config: WorkspaceConfig) {
-  const app = Fastify({ bodyLimit: 1_000_000, logger: false });
+  const app = Fastify({
+    bodyLimit: 1_000_000,
+    requestTimeout: 15_000,
+    logger: false,
+    trustProxy: config.trustOneProxy ? (_address, hop) => hop === 0 : false,
+  });
   const origins = new Set(config.clientOrigins);
   if (
     !origins.size ||
@@ -50,9 +59,18 @@ export async function createWorkspaceApp(config: WorkspaceConfig) {
     )
       throw new InputError('Источник запроса не разрешён.', 'ORIGIN_NOT_ALLOWED', 403);
   });
-  app.addHook('onSend', async (_request, reply) => {
+  app.addHook('onSend', async (request, reply) => {
     reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff');
     reply.header('Referrer-Policy', 'no-referrer').header('X-Frame-Options', 'DENY');
+    if (config.secureCookies)
+      reply
+        .header('Strict-Transport-Security', 'max-age=31536000')
+        .header('Cross-Origin-Resource-Policy', 'same-origin');
+    if (config.spaDirectory && request.url.startsWith('/app/'))
+      reply.header(
+        'Content-Security-Policy',
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      );
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof InputError)
@@ -86,6 +104,14 @@ export async function createWorkspaceApp(config: WorkspaceConfig) {
     await config.pool.query('SELECT 1');
     return { status: 'ok', service: 'faultview-api' };
   });
+  if (config.spaDirectory) {
+    await app.register(serveStatic, {
+      root: resolve(config.spaDirectory),
+      prefix: '/app/',
+      redirect: true,
+    });
+    app.get('/', (_request, reply) => reply.redirect('/app/'));
+  }
   const auth = createAuth(config.pool, config.secureCookies);
   auth.register(app);
   registerProjects(app, config.pool, auth, config.demo);

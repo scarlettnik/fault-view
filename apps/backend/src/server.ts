@@ -48,6 +48,8 @@ const app = await (async () => {
       pool,
       clientOrigins,
       secureCookies: production,
+      spaDirectory: process.env.FAULTVIEW_SPA_DIST,
+      trustOneProxy: process.env.FAULTVIEW_TRUST_PROXY === '1',
       demo,
       execution: {
         demoOnly: production,

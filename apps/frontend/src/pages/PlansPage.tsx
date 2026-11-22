@@ -9,6 +9,7 @@ import {
   PathIcon,
   PlayIcon,
 } from '@phosphor-icons/react';
+import { selectBusy } from '../store/selectors';
 import { useRunNavigation } from '../hooks/useRunNavigation';
 import { serverMode } from '../core/workspaceApi';
 import { saveServerPlan } from '../store/server';
@@ -119,7 +120,7 @@ export function PlansPage() {
   const project = useProject();
   const dispatch = useAppDispatch();
   const { startRun, starting } = useRunNavigation(project.id);
-  const busy = useAppSelector((state) => !!state.workspace.active || !!state.workspace.activeRun);
+  const busy = useAppSelector((state) => selectBusy(state, project.id));
   const [params] = useSearchParams();
   const job = latestDiscovery(project);
   const graph = job?.graph;

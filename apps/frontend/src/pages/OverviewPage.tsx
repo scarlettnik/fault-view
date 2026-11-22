@@ -21,7 +21,7 @@ export function OverviewPage() {
   const saved = (location.state as { projectSaved?: boolean } | null)?.projectSaved;
   const { setExcluded, exclusionError } = useRouteExclusion(project);
   const dispatch = useAppDispatch();
-  const busy = useAppSelector(selectBusy);
+  const busy = useAppSelector((state) => selectBusy(state, project.id));
   const [error, setError] = useState('');
   const [showExcluded, setShowExcluded] = useState(false);
   const current = project.jobs[0];

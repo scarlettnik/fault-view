@@ -209,6 +209,17 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   assert.equal((await call('GET', compare(runIds[2]!), undefined, session)).statusCode, 409);
   assert.equal((await call('GET', compare(runIds[1]!), undefined, other)).statusCode, 404);
   assert.equal(
+    (
+      await call(
+        'GET',
+        demoPath + '/runs/compare?baseline=' + runIds[0] + '&candidate=' + runIds[1],
+        undefined,
+        session,
+      )
+    ).statusCode,
+    404,
+  );
+  assert.equal(
     (await call('GET', compare(runIds[1]!), undefined, session)).json().cases[0].change,
     'improved',
   );
@@ -250,4 +261,23 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   assert.ok(deletion.rowCount || deleted.includes(objectKey));
   assert.equal((await call('POST', auth + 'logout', undefined, session)).statusCode, 204);
   assert.equal((await call('GET', auth + 'session', undefined, session)).statusCode, 401);
+  await pool.query(
+    "UPDATE sessions SET expires_at = now() - interval '1 minute' WHERE user_id = $1",
+    [otherRegistration.json().id],
+  );
+  assert.equal((await call('GET', auth + 'session', undefined, other)).statusCode, 401);
+  for (let index = 0; index < 8; index++) {
+    assert.equal(
+      (
+        await call('POST', auth + 'login', {
+          email: 'missing@test.example',
+          password: 'a valid length password',
+        })
+      ).statusCode,
+      401,
+    );
+  }
+  const rateLimited = await call('POST', auth + 'login', { email: 'owner@test.example', password });
+  assert.equal(rateLimited.statusCode, 429);
+  assert.equal(rateLimited.json().code, 'RATE_LIMITED');
 });

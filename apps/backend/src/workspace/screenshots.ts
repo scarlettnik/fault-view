@@ -27,6 +27,9 @@ export function createScreenshotStorage(env: NodeJS.ProcessEnv): ScreenshotStora
   const region = z.string().min(1).parse(env.AWS_REGION);
   const raw = env.FAULTVIEW_S3_ENDPOINT;
   const endpoint = raw ? new URL(raw) : undefined;
+  // The Compose alias lives on a private network with no published ports.
+  const composeEndpoint =
+    env.FAULTVIEW_S3_INTERNAL === 'true' && endpoint?.origin === 'http://object-store:8333';
   if (
     endpoint &&
     (!['http:', 'https:'].includes(endpoint.protocol) ||
@@ -35,7 +38,7 @@ export function createScreenshotStorage(env: NodeJS.ProcessEnv): ScreenshotStora
       endpoint.search ||
       endpoint.hash ||
       endpoint.pathname !== '/' ||
-      (env.NODE_ENV === 'production' && endpoint.protocol !== 'https:'))
+      (env.NODE_ENV === 'production' && endpoint.protocol !== 'https:' && !composeEndpoint))
   )
     throw new Error('FAULTVIEW_S3_ENDPOINT must be a trusted S3 origin (HTTPS in production).');
   const client = new S3Client({

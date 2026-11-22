@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { DownloadSimpleIcon, PlayIcon, StopIcon } from '@phosphor-icons/react';
 import { cancelOperation } from '../store/operations';
 import { usePreparedPlan } from '../hooks/usePreparedPlan';
+import { selectBusy } from '../store/selectors';
 import { useRunNavigation } from '../hooks/useRunNavigation';
 import { serverMode } from '../core/workspaceApi';
 import {
@@ -26,7 +27,7 @@ export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId:
   const { prepare, isPreparing } = usePreparedPlan(projectId);
   const [error, setError] = useState('');
   const { startRun, starting } = useRunNavigation(projectId);
-  const busy = useAppSelector((store) => !!store.workspace.active || !!store.workspace.activeRun);
+  const busy = useAppSelector((state) => selectBusy(state, projectId));
   const currentExcluded = useAppSelector(
     (store) =>
       store.workspace.projects.find((project) => project.id === projectId)?.excludedRouteIds,
@@ -102,7 +103,7 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
   const [error, setError] = useState('');
   const dispatch = useAppDispatch();
   const { startRun, starting } = useRunNavigation(projectId);
-  const active = useAppSelector((state) => !!state.workspace.active || !!state.workspace.activeRun);
+  const active = useAppSelector((state) => selectBusy(state, projectId));
   const currentExcluded = useAppSelector(
     (state) =>
       state.workspace.projects.find((project) => project.id === projectId)?.excludedRouteIds,

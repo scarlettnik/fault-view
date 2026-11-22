@@ -198,8 +198,8 @@ export function ProjectsPage() {
                     aria-label={`Удалить проект ${project.name}`}
                     disabled={
                       pending ||
-                      active?.projectId === project.id ||
-                      activeRun?.projectId === project.id
+                      (!serverMode &&
+                        (active?.projectId === project.id || activeRun?.projectId === project.id))
                     }
                     onClick={() => setDeleting(project)}
                   >

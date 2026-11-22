@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.aws
+.idea
+**/.env*
+**/node_modules
+**/dist
+**/data
+**/test-results
+**/storybook-static
+site-dist
+examples/open-source/sources
+examples/open-source/.runtime

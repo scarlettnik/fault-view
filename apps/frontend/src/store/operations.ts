@@ -48,7 +48,7 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
   'operations/discover',
   async (projectId, api) => {
     const project = findProject(api.getState(), projectId);
-    if (api.getState().workspace.active || api.getState().workspace.activeRun)
+    if (!serverMode && (api.getState().workspace.active || api.getState().workspace.activeRun))
       throw new Error('Дождитесь завершения текущей операции.');
     if (serverMode) {
       const job = await workspaceRequest(api, projectPath(projectId) + '/discoveries', jobSchema, {
@@ -175,7 +175,7 @@ export const executePlan = createAsyncThunk<
   { state: State }
 >('operations/execute', async ({ projectId, plan }, api) => {
   const project = findProject(api.getState(), projectId);
-  if (api.getState().workspace.active || api.getState().workspace.activeRun)
+  if (!serverMode && (api.getState().workspace.active || api.getState().workspace.activeRun))
     throw new Error('Дождитесь завершения текущей операции.');
   if (serverMode) {
     const run = await workspaceRequest(api, projectPath(projectId) + '/runs', runSchema, {

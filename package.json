@@ -27,13 +27,18 @@
     "test:e2e": "npm --prefix apps/frontend run test:e2e",
     "test:visual": "npm --prefix apps/frontend run test:visual",
     "test:visual:update": "npm --prefix apps/frontend run test:visual:update",
-    "verify": "npm run check && npm run check:runner && npm run build && npm run test:site && npm run test:examples && npm run test:e2e && npm run test:visual",
+    "verify": "npm run check && npm run check:runner && npm run test:runner && npm run build && npm run test:site && npm run test:examples && npm run test:e2e && npm run test:visual",
     "hooks:install": "node scripts/install-hooks.mjs",
     "lint:scripts": "node apps/frontend/node_modules/eslint/bin/eslint.js scripts examples/tooling examples/pages examples/tests examples/playwright.config.js eslint.config.mjs --max-warnings=0",
     "test:site": "npm --prefix apps/frontend run test:site",
     "test:examples": "npm --prefix examples test",
     "dev:backend": "npm --prefix apps/backend run dev",
-    "check:runner": "npm --prefix apps/backend run typecheck"
+    "check:runner": "npm --prefix apps/backend run typecheck",
+    "dev:fullstack": "node scripts/dev.mjs --fullstack",
+    "test:api": "npm --prefix apps/backend run test:api",
+    "test:runner": "npm --prefix apps/backend test",
+    "test:e2e:full": "npm --prefix apps/frontend run test:e2e:full",
+    "prepare:vps": "node scripts/prepare-vps-env.mjs"
   },
   "engines": {
     "node": "^22.22.0 || >=24.8.0"
