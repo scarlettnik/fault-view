@@ -4,11 +4,11 @@ import { buildPlan, planExecutionProblem } from '../core/cascade';
 import { latestDiscovery, type Job, type PlanInput, type TestRun } from '../core/model';
 import { jobReceived, runReceived, type Workspace } from './workspace';
 import {
-  browserChecksEnabled,
+  getRunnerBase,
+  runnerRequest,
+  isPlaywrightEnabled,
   parseRemoteJob,
   parseRemoteRun,
-  runnerRequest,
-  runnerUrl,
 } from '../core/runner';
 
 type State = { workspace: Workspace };
@@ -38,6 +38,7 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
     const project = findProject(api.getState(), projectId);
     if (api.getState().workspace.active || api.getState().workspace.activeRun)
       throw new Error('Дождитесь завершения текущей операции.');
+    const browserChecksEnabled = isPlaywrightEnabled(api.getState().workspace.executionMode);
     let job: Job = {
       id: api.requestId,
       source: browserChecksEnabled ? 'playwright' : 'simulation',
@@ -146,6 +147,7 @@ export const executePlan = createAsyncThunk<
   const project = findProject(api.getState(), projectId);
   if (api.getState().workspace.active || api.getState().workspace.activeRun)
     throw new Error('Дождитесь завершения текущей операции.');
+  const browserChecksEnabled = isPlaywrightEnabled(api.getState().workspace.executionMode);
   const job = project.jobs.find((job) => job.id === plan.discoveryId && job.graph);
   if (!job?.graph) throw new Error('Граф не найден. Постройте его повторно.');
   const prepared = buildPlan(job.graph, plan);
@@ -194,6 +196,7 @@ export const executePlan = createAsyncThunk<
   let remoteId: string | undefined;
   try {
     if (browserChecksEnabled) {
+      const runnerUrl = getRunnerBase();
       let remote = parseRemoteRun(
         await runnerRequest('/runs', {
           method: 'POST',

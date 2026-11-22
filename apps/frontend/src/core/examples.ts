@@ -1,6 +1,6 @@
 import type { Project } from './model';
 import projects from '../../../../examples/projects.json' with { type: 'json' };
-import { browserChecksEnabled } from './runner';
+import { isPlaywrightEnabled } from './runner';
 
 export const exampleProjects = projects;
 export function exampleUrl(id: string) {
@@ -28,7 +28,10 @@ export const exampleSpecification = JSON.stringify(
   2,
 );
 
-export function createExampleProject(id = 'storefront'): Project {
+export function createExampleProject(
+  id = 'storefront',
+  browserChecksEnabled = isPlaywrightEnabled(),
+): Project {
   const example = exampleProjects.find((project) => project.id === id);
   if (!example) throw new Error('Неизвестный пример.');
   let specification =

@@ -2,14 +2,19 @@ import { Button } from './Button';
 import { useState, type SubmitEvent } from 'react';
 import { UploadSimpleIcon, FileCodeIcon } from '@phosphor-icons/react';
 import { defaultChecks, projectInputSchema, type ProjectInput, type UiChecks } from '../core/model';
-import { browserChecksEnabled } from '../core/runner';
+import { isPlaywrightEnabled } from '../core/runner';
 import { parseLocalSpecification } from '../core/localEngine';
 
 interface Props {
   initial?: ProjectInput & { checks?: UiChecks };
+  browserChecksEnabled?: boolean;
   onSave: (input: ProjectInput & { checks?: UiChecks }) => void;
 }
-export function ProjectForm({ initial, onSave }: Props) {
+export function ProjectForm({
+  initial,
+  onSave,
+  browserChecksEnabled = isPlaywrightEnabled(),
+}: Props) {
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     description: initial?.description ?? '',

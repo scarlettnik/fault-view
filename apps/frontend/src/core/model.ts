@@ -225,6 +225,7 @@ export const projectSchema = projectInputSchema.extend({
 });
 export type Project = z.infer<typeof projectSchema>;
 export const workspaceSchema = z.object({
+  executionMode: z.enum(['live', 'simulation']).default('live'),
   version: z.literal(2),
   projects: z.array(projectSchema).max(30),
   importedExampleIds: z.array(z.string()).default([]),

@@ -13,9 +13,12 @@ import { dateLabel, latestDiscovery, type Project } from '../core/model';
 import { ConfirmDialog, EmptyState, Notice, PageHeading, StatusBadge } from '../components/ui';
 import { createExampleProject, exampleProjects, exampleUrl } from '../core/examples';
 import { selectProjects } from '../store/selectors';
-import { browserChecksEnabled } from '../core/runner';
+import { isPlaywrightEnabled } from '../core/runner';
 
 export function ProjectsPage() {
+  const browserChecksEnabled = useAppSelector((state) =>
+    isPlaywrightEnabled(state.workspace.executionMode),
+  );
   const projects = useAppSelector(selectProjects);
   const active = useAppSelector((state) => state.workspace.active);
   const activeRun = useAppSelector((state) => state.workspace.activeRun);
@@ -30,9 +33,9 @@ export function ProjectsPage() {
         setError('Можно сохранить до 30 проектов.');
         return;
       }
-      dispatch(projectSaved(createExampleProject(id)));
+      dispatch(projectSaved(createExampleProject(id, browserChecksEnabled)));
     } else if (existing.frontendUrl !== exampleUrl(id) || browserChecksEnabled) {
-      const example = createExampleProject(id);
+      const example = createExampleProject(id, browserChecksEnabled);
       dispatch(
         projectSaved({
           ...existing,

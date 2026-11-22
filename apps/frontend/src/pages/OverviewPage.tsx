@@ -1,4 +1,4 @@
-import { browserChecksEnabled } from '../core/runner';
+import { isPlaywrightEnabled } from '../core/runner';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileCodeIcon, GlobeIcon, PlayIcon, StopIcon } from '@phosphor-icons/react';
@@ -12,6 +12,9 @@ import { DependencyGraph } from '../components/DependencyGraph';
 import { useProject } from './ProjectPages';
 
 export function OverviewPage() {
+  const browserChecksEnabled = useAppSelector((state) =>
+    isPlaywrightEnabled(state.workspace.executionMode),
+  );
   const project = useProject();
   const dispatch = useAppDispatch();
   const busy = useAppSelector(selectBusy);

@@ -13,9 +13,12 @@ import {
 } from '@phosphor-icons/react';
 import { useAppSelector } from '../store';
 import { Busy, Notice } from './ui';
-import { browserChecksEnabled } from '../core/runner';
+import { isPlaywrightEnabled } from '../core/runner';
 
 export function WorkspaceShell() {
+  const browserChecksEnabled = useAppSelector((state) =>
+    isPlaywrightEnabled(state.workspace.executionMode),
+  );
   const match = useMatch('/projects/:projectId/*');
   const project = useAppSelector((state) =>
     state.workspace.projects.find((item) => item.id === match?.params.projectId),
@@ -27,7 +30,7 @@ export function WorkspaceShell() {
   useEffect(() => {
     document.title = projectName
       ? `${projectName} · FaultView`
-      : `${location.pathname === '/about' ? 'О проекте' : 'Проекты'} · FaultView`;
+      : `${location.pathname === '/about' ? 'О проекте' : location.pathname === '/runner' ? 'Подключение Playwright' : 'Проекты'} · FaultView`;
   }, [location.pathname, projectName]);
   const closeMobile = () => setMobileOpen(false);
   const base = project ? `/projects/${project.id}` : '';

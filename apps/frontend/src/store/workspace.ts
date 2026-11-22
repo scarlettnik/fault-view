@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { isRunning, type Job, type Project, type SavedPlan, type TestRun } from '../core/model';
 
 export interface Workspace {
+  executionMode?: 'live' | 'simulation';
   projects: Project[];
   importedExampleIds?: string[];
   active?: { projectId: string; jobId: string };
@@ -13,6 +14,9 @@ const slice = createSlice({
   name: 'workspace',
   initialState,
   reducers: {
+    executionModeChanged(state, { payload }: PayloadAction<'live' | 'simulation'>) {
+      state.executionMode = payload;
+    },
     projectSaved(state, { payload }: PayloadAction<Project>) {
       const index = state.projects.findIndex((project) => project.id === payload.id);
       if (index < 0) state.projects.unshift(payload);
@@ -75,6 +79,7 @@ const slice = createSlice({
   },
 });
 export const {
+  executionModeChanged,
   projectSaved,
   projectRemoved,
   jobReceived,

@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { projectSaved } from '../store/workspace';
 import { selectProjectCount, selectProjectById } from '../store/selectors';
 import { type Project, type ProjectInput, type UiChecks } from '../core/model';
+import { isPlaywrightEnabled } from '../core/runner';
 import { EmptyState, Notice, PageHeading } from '../components/ui';
 import { ProjectForm } from '../components/ProjectForm';
 
@@ -30,6 +31,9 @@ export function ProjectBoundary() {
 export const useProject = () => useOutletContext<Project>();
 
 export function NewProjectPage() {
+  const browserChecksEnabled = useAppSelector((state) =>
+    isPlaywrightEnabled(state.workspace.executionMode),
+  );
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const count = useAppSelector(selectProjectCount);
@@ -55,13 +59,16 @@ export function NewProjectPage() {
         <Notice kind="error">Можно сохранить до 30 проектов. Удалите ненужный проект.</Notice>
       ) : (
         <div className="form-width">
-          <ProjectForm onSave={save} />
+          <ProjectForm onSave={save} browserChecksEnabled={browserChecksEnabled} />
         </div>
       )}
     </>
   );
 }
 export function SettingsPage() {
+  const browserChecksEnabled = useAppSelector((state) =>
+    isPlaywrightEnabled(state.workspace.executionMode),
+  );
   const project = useProject();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -95,7 +102,12 @@ export function SettingsPage() {
         </Notice>
       ) : (
         <div className="form-width">
-          <ProjectForm key={project.id} initial={project} onSave={save} />
+          <ProjectForm
+            key={project.id}
+            initial={project}
+            onSave={save}
+            browserChecksEnabled={browserChecksEnabled}
+          />
         </div>
       )}
     </>

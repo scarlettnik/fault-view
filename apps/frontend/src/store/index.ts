@@ -19,9 +19,9 @@ function loadWorkspace(): Workspace {
         ['queued', 'running'].includes(run.status) ? { ...run, status: 'cancelled' as const } : run,
       ),
     }));
-    return { projects, storageError: false };
+    return { projects, executionMode: stored.executionMode, storageError: false };
   } catch {
-    return { projects: [], storageError: true };
+    return { projects: [], executionMode: 'live', storageError: true };
   }
 }
 export function createStore(preloaded?: Workspace) {
@@ -37,7 +37,14 @@ export function createStore(preloaded?: Workspace) {
     if (state === previous || protectedStorage) return;
     previous = state;
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ version: 2, projects: state.projects }));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          version: 2,
+          projects: state.projects,
+          executionMode: state.executionMode ?? 'live',
+        }),
+      );
     } catch {
       if (!state.storageError) result.dispatch(storageFailed(true));
     }

@@ -1,4 +1,5 @@
 import { AboutPage } from './pages/AboutPage';
+import { RunnerConnection } from './components/RunnerConnection';
 import { Component, lazy, type ErrorInfo, type ReactNode } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { WorkspaceShell } from './components/WorkspaceShell';
@@ -57,6 +58,7 @@ export function App() {
       <Route element={<WorkspaceShell />}>
         <Route index element={<ProjectsPage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="runner" element={<RunnerConnection />} />
         <Route path="projects/new" element={<NewProjectPage />} />
         <Route path="projects/:projectId" element={<ProjectBoundary />}>
           <Route index element={<OverviewPage />} />
