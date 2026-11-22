@@ -1,7 +1,19 @@
+import { z } from 'zod';
+import { serverMode, projectPath } from '../core/workspaceApi';
+import { workspaceRequest, sessionExpired, signOut, type ServerState } from './server';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { createLocalGraph, simulateCase } from '../core/localEngine';
 import { buildPlan, planExecutionProblem } from '../core/cascade';
-import { latestDiscovery, type Job, type PlanInput, type TestRun } from '../core/model';
+import {
+  jobSchema,
+  latestDiscovery,
+  planInputSchema,
+  planSchema,
+  runSchema,
+  type Job,
+  type PlanInput,
+  type TestRun,
+} from '../core/model';
 import { jobReceived, runReceived, type Workspace } from './workspace';
 import {
   getRunnerBase,
@@ -11,7 +23,7 @@ import {
   parseRemoteRun,
 } from '../core/runner';
 
-type State = { workspace: Workspace };
+type State = { workspace: Workspace; server: ServerState };
 const controllers = new Map<string, AbortController>();
 function wait(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -38,6 +50,13 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
     const project = findProject(api.getState(), projectId);
     if (api.getState().workspace.active || api.getState().workspace.activeRun)
       throw new Error('Дождитесь завершения текущей операции.');
+    if (serverMode) {
+      const job = await workspaceRequest(api, projectPath(projectId) + '/discoveries', jobSchema, {
+        method: 'POST',
+      });
+      api.dispatch(jobReceived({ projectId, job }));
+      return job;
+    }
     const browserChecksEnabled = isPlaywrightEnabled(api.getState().workspace.executionMode);
     let job: Job = {
       id: api.requestId,
@@ -123,22 +142,33 @@ export const discoverProject = createAsyncThunk<Job, string, { state: State }>(
   },
 );
 
-export const prepareLocalPlan = createAsyncThunk(
-  'operations/plan',
-  async ({ projectId, input }: { projectId: string; input: PlanInput }, api) => {
-    const project = findProject(api.getState() as State, projectId);
-    const job =
-      project.jobs.find((job) => job.id === input.discoveryId && job.graph) ??
-      latestDiscovery(project);
-    if (!job?.graph) throw new Error('Сначала постройте локальный граф.');
-    const effective = {
-      ...input,
-      discoveryId: job.id,
-      excludedRouteIds: [...new Set([...input.excludedRouteIds, ...project.excludedRouteIds])],
-    };
-    return { input: effective, result: buildPlan(job.graph, effective) };
-  },
-);
+export const prepareLocalPlan = createAsyncThunk<
+  { input: PlanInput; result: ReturnType<typeof buildPlan> },
+  { projectId: string; input: PlanInput },
+  { state: State }
+>('operations/plan', async ({ projectId, input }: { projectId: string; input: PlanInput }, api) => {
+  if (serverMode)
+    return workspaceRequest(
+      api,
+      projectPath(projectId) + '/plans/preview',
+      z.object({ input: planInputSchema, result: planSchema }),
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  const project = findProject(api.getState(), projectId);
+  const job =
+    project.jobs.find((job) => job.id === input.discoveryId && job.graph) ??
+    latestDiscovery(project);
+  if (!job?.graph) throw new Error('Сначала постройте локальный граф.');
+  const effective = {
+    ...input,
+    discoveryId: job.id,
+    excludedRouteIds: [...new Set([...input.excludedRouteIds, ...project.excludedRouteIds])],
+  };
+  return { input: effective, result: buildPlan(job.graph, effective) };
+});
 export const executePlan = createAsyncThunk<
   TestRun,
   { projectId: string; plan: PlanInput },
@@ -147,6 +177,14 @@ export const executePlan = createAsyncThunk<
   const project = findProject(api.getState(), projectId);
   if (api.getState().workspace.active || api.getState().workspace.activeRun)
     throw new Error('Дождитесь завершения текущей операции.');
+  if (serverMode) {
+    const run = await workspaceRequest(api, projectPath(projectId) + '/runs', runSchema, {
+      method: 'POST',
+      body: plan,
+    });
+    api.dispatch(runReceived({ projectId, run }));
+    return run;
+  }
   const browserChecksEnabled = isPlaywrightEnabled(api.getState().workspace.executionMode);
   const job = project.jobs.find((job) => job.id === plan.discoveryId && job.graph);
   if (!job?.graph) throw new Error('Граф не найден. Постройте его повторно.');
@@ -255,12 +293,36 @@ export const executePlan = createAsyncThunk<
     controllers.delete(key);
   }
 });
-export const cancelOperation = createAsyncThunk(
-  'operations/cancel',
-  async ({ projectId, kind }: { projectId: string; kind: 'discovery' | 'run' }) => {
+export const cancelOperation = createAsyncThunk<
+  void,
+  { projectId: string; kind: 'discovery' | 'run' },
+  { state: State }
+>('operations/cancel', async ({ projectId, kind }, scope) => {
+  if (!serverMode) {
     controllers.get(`${kind}:${projectId}`)?.abort();
-  },
-);
+    return;
+  }
+  const { workspace } = scope.getState();
+  const base = projectPath(projectId);
+  if (kind === 'discovery' && workspace.active?.projectId === projectId) {
+    const job = await workspaceRequest(
+      scope,
+      base + '/discoveries/' + workspace.active.jobId + '/cancel',
+      jobSchema,
+      { method: 'POST' },
+    );
+    scope.dispatch(jobReceived({ projectId, job }));
+  }
+  if (kind === 'run' && workspace.activeRun?.projectId === projectId) {
+    const run = await workspaceRequest(
+      scope,
+      base + '/runs/' + workspace.activeRun.runId + '/cancel',
+      runSchema,
+      { method: 'POST' },
+    );
+    scope.dispatch(runReceived({ projectId, run }));
+  }
+});
 
 const slice = createSlice({
   name: 'operations',
@@ -270,6 +332,14 @@ const slice = createSlice({
   },
   reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(sessionExpired, (state) => {
+      state.status = 'idle';
+      state.error = '';
+    });
+    builder.addCase(signOut.fulfilled, (state) => {
+      state.status = 'idle';
+      state.error = '';
+    });
     for (const thunk of [discoverProject, prepareLocalPlan, executePlan, cancelOperation]) {
       builder.addCase(thunk.pending, (state) => {
         state.status = 'loading';

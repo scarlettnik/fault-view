@@ -11,14 +11,32 @@ import {
   SquaresFourIcon,
   XIcon,
 } from '@phosphor-icons/react';
-import { useAppSelector } from '../store';
+import { useAppDispatch, useAppSelector } from '../store';
 import { Busy, Notice } from './ui';
 import { isPlaywrightEnabled } from '../core/runner';
+import { serverMode } from '../core/workspaceApi';
+import { signOut } from '../store/server';
+import { messageFor } from '../core/model';
 
 export function WorkspaceShell() {
   const browserChecksEnabled = useAppSelector((state) =>
     isPlaywrightEnabled(state.workspace.executionMode),
   );
+  const user = useAppSelector((state) => state.server.user);
+  const dispatch = useAppDispatch();
+  const [leaving, setLeaving] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+  async function logout() {
+    setLeaving(true);
+    setLogoutError('');
+    try {
+      await dispatch(signOut()).unwrap();
+    } catch (value) {
+      setLogoutError(messageFor(value));
+    } finally {
+      setLeaving(false);
+    }
+  }
   const match = useMatch('/projects/:projectId/*');
   const project = useAppSelector((state) =>
     state.workspace.projects.find((item) => item.id === match?.params.projectId),
@@ -106,6 +124,15 @@ export function WorkspaceShell() {
         </nav>
         <div className="sidebar-bottom">
           <Link to="/about">О проекте</Link>
+          {user ? (
+            <div className="account-sidebar">
+              <p title={user.email}>{user.email}</p>
+              <button className="button secondary" disabled={leaving} onClick={() => void logout()}>
+                Выйти
+              </button>
+              {logoutError ? <Notice kind="error">{logoutError}</Notice> : null}
+            </div>
+          ) : null}
         </div>
       </aside>
       {mobileOpen ? (
@@ -131,7 +158,11 @@ export function WorkspaceShell() {
           </div>
           <span className="connection online">
             <span className="status-dot" />
-            {browserChecksEnabled ? 'Playwright' : 'Локальная симуляция'}
+            {serverMode
+              ? 'Серверный аккаунт'
+              : browserChecksEnabled
+                ? 'Playwright'
+                : 'Локальная симуляция'}
           </span>
         </header>
         <main id="main" tabIndex={-1}>

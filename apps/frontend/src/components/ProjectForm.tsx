@@ -8,11 +8,13 @@ import { parseLocalSpecification } from '../core/localEngine';
 interface Props {
   initial?: ProjectInput & { checks?: UiChecks };
   browserChecksEnabled?: boolean;
+  saving?: boolean;
   onSave: (input: ProjectInput & { checks?: UiChecks }) => void;
 }
 export function ProjectForm({
   initial,
   onSave,
+  saving = false,
   browserChecksEnabled = isPlaywrightEnabled(),
 }: Props) {
   const [form, setForm] = useState({
@@ -201,7 +203,7 @@ export function ProjectForm({
         </details>
       ) : null}
       <div className="form-actions">
-        <Button type="submit" busy={reading}>
+        <Button type="submit" busy={reading || saving}>
           Сохранить проект
         </Button>
       </div>

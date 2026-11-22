@@ -753,3 +753,37 @@
     grid-template-columns: 1fr;
   }
 }
+
+.account-gate {
+  width: min(100% - 2rem, 28rem);
+  margin: clamp(2rem, 12vh, 8rem) auto;
+}
+.account-brand {
+  margin-bottom: 2rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+.account-gate .row {
+  flex-wrap: wrap;
+}
+
+.account-sidebar {
+  margin-top: 1rem;
+}
+.account-sidebar p {
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.comparison-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.comparison-controls .field {
+  min-width: 12rem;
+}

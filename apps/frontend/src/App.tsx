@@ -1,3 +1,5 @@
+import { AccountGate } from './components/AccountGate';
+import { serverMode } from './core/workspaceApi';
 import { AboutPage } from './pages/AboutPage';
 import { RunnerConnection } from './components/RunnerConnection';
 import { Component, lazy, type ErrorInfo, type ReactNode } from 'react';
@@ -25,6 +27,9 @@ const SavedPlanPage = lazy(() =>
   import('./pages/HistoryPages').then((module) => ({ default: module.SavedPlanPage })),
 );
 
+const CompareRunsPage = lazy(() =>
+  import('./pages/HistoryPages').then((module) => ({ default: module.CompareRunsPage })),
+);
 const RunDetailsPage = lazy(() =>
   import('./pages/HistoryPages').then((module) => ({ default: module.RunDetailsPage })),
 );
@@ -53,12 +58,22 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { faile
   }
 }
 export function App() {
+  return serverMode ? (
+    <AccountGate>
+      <WorkspaceRoutes />
+    </AccountGate>
+  ) : (
+    <WorkspaceRoutes />
+  );
+}
+
+function WorkspaceRoutes() {
   return (
     <Routes>
       <Route element={<WorkspaceShell />}>
         <Route index element={<ProjectsPage />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="runner" element={<RunnerConnection />} />
+        {serverMode ? null : <Route path="runner" element={<RunnerConnection />} />}
         <Route path="projects/new" element={<NewProjectPage />} />
         <Route path="projects/:projectId" element={<ProjectBoundary />}>
           <Route index element={<OverviewPage />} />
@@ -66,6 +81,7 @@ export function App() {
           <Route path="dependencies" element={<DependenciesPage />} />
           <Route path="plans" element={<PlansPage />} />
           <Route path="plans/:planId" element={<SavedPlanPage />} />
+          {serverMode ? <Route path="runs/compare" element={<CompareRunsPage />} /> : null}
           <Route path="runs/:runId" element={<RunDetailsPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="discoveries/:jobId" element={<DiscoveryDetailsPage />} />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { profileInfo, type CaseResult, type TestRun } from '../core/model';
 import { screenshotUrl } from '../core/runner';
+import { apiUrl, projectPath, serverMode } from '../core/workspaceApi';
 
 function Screenshot({ src, caption }: { src: string; caption: string }) {
   const [failedSource, setFailedSource] = useState('');
@@ -51,7 +52,15 @@ function ScenarioPreview({ state }: { state: CaseResult['previewState'] }) {
   );
 }
 
-export function CaseEvidence({ result, run }: { result: CaseResult; run: TestRun }) {
+export function CaseEvidence({
+  result,
+  run,
+  projectId,
+}: {
+  result: CaseResult;
+  run: TestRun;
+  projectId: string;
+}) {
   const browser = result.source === 'playwright';
   const shots = [
     { key: result.baselineScreenshot, caption: 'До отказа · исходное состояние' },
@@ -66,7 +75,16 @@ export function CaseEvidence({ result, run }: { result: CaseResult; run: TestRun
             : 'Результат · после отказа API',
     },
   ].flatMap((shot) => {
-    const src = shot.key ? screenshotUrl(run, shot.key) : undefined;
+    if (!shot.key) return [];
+    const src = serverMode
+      ? apiUrl(
+          projectPath(projectId) +
+            '/runs/' +
+            encodeURIComponent(run.id) +
+            '/screenshots/' +
+            encodeURIComponent(shot.key),
+        )
+      : screenshotUrl(run, shot.key);
     return src ? [{ ...shot, src }] : [];
   });
   const counts = { passed: 0, failed: 0, warning: 0, skipped: 0 };

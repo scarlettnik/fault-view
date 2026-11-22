@@ -1,21 +1,25 @@
 import { isPlaywrightEnabled } from '../core/runner';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FileCodeIcon, GlobeIcon, PlayIcon, StopIcon } from '@phosphor-icons/react';
 import { discoverProject, cancelOperation } from '../store/operations';
 import { selectBusy } from '../store/selectors';
 import { dateLabel, isRunning, latestDiscovery, messageFor } from '../core/model';
 import { useAppDispatch, useAppSelector } from '../store';
-import { routeExcluded, routeRestored } from '../store/workspace';
+import { useRouteExclusion } from '../hooks/useRouteExclusion';
+import { serverMode } from '../core/workspaceApi';
 import { Notice, PageHeading, ProjectExport, StatusBadge } from '../components/ui';
 import { DependencyGraph } from '../components/DependencyGraph';
 import { useProject } from './ProjectPages';
 
 export function OverviewPage() {
-  const browserChecksEnabled = useAppSelector((state) =>
-    isPlaywrightEnabled(state.workspace.executionMode),
+  const browserChecksEnabled = useAppSelector(
+    (state) => serverMode || isPlaywrightEnabled(state.workspace.executionMode),
   );
   const project = useProject();
+  const location = useLocation();
+  const saved = (location.state as { projectSaved?: boolean } | null)?.projectSaved;
+  const { setExcluded, exclusionError } = useRouteExclusion(project);
   const dispatch = useAppDispatch();
   const busy = useAppSelector(selectBusy);
   const [error, setError] = useState('');
@@ -43,6 +47,8 @@ export function OverviewPage() {
   return (
     <>
       <PageHeading title={project.name} actions={<ProjectExport project={project} />} />
+      {saved ? <Notice kind="success">Проект сохранён.</Notice> : null}
+      {exclusionError ? <Notice kind="error">{exclusionError}</Notice> : null}
       <div className="project-connection">
         <div>
           <GlobeIcon size={20} />
@@ -169,8 +175,8 @@ export function OverviewPage() {
             excluded={project.excludedRouteIds}
             search=""
             showExcluded={showExcluded}
-            onExclude={(routeId) => dispatch(routeExcluded({ projectId: project.id, routeId }))}
-            onRestore={(routeId) => dispatch(routeRestored({ projectId: project.id, routeId }))}
+            onExclude={(routeId) => void setExcluded(routeId, true)}
+            onRestore={(routeId) => void setExcluded(routeId, false)}
           />
           {graph.warnings.length ? (
             <details className="check-settings">

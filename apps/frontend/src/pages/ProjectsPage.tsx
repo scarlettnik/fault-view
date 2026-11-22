@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRightIcon,
@@ -9,25 +9,61 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '../store';
 import { projectRemoved, projectSaved } from '../store/workspace';
-import { dateLabel, latestDiscovery, type Project } from '../core/model';
-import { ConfirmDialog, EmptyState, Notice, PageHeading, StatusBadge } from '../components/ui';
+import {
+  dateLabel,
+  latestDiscovery,
+  messageFor,
+  type Project,
+  type ProjectSummary,
+} from '../core/model';
+import {
+  Busy,
+  ConfirmDialog,
+  EmptyState,
+  Notice,
+  PageHeading,
+  StatusBadge,
+} from '../components/ui';
 import { createExampleProject, exampleProjects, exampleUrl } from '../core/examples';
 import { selectProjects } from '../store/selectors';
 import { isPlaywrightEnabled } from '../core/runner';
+import { serverMode } from '../core/workspaceApi';
+import { deleteProject, loadProjects, openDemo } from '../store/server';
 
 export function ProjectsPage() {
   const browserChecksEnabled = useAppSelector((state) =>
     isPlaywrightEnabled(state.workspace.executionMode),
   );
-  const projects = useAppSelector(selectProjects);
+  const localProjects = useAppSelector(selectProjects);
+  const remoteProjects = useAppSelector((state) => state.server.projects);
+  const { list, listError, capabilities } = useAppSelector((state) => state.server);
+  const projects: (Project | ProjectSummary)[] = serverMode ? remoteProjects : localProjects;
   const active = useAppSelector((state) => state.workspace.active);
   const activeRun = useAppSelector((state) => state.workspace.activeRun);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const [deleting, setDeleting] = useState<Project>();
+  const [deleting, setDeleting] = useState<Project | ProjectSummary>();
   const [error, setError] = useState('');
-  function openExample(id = 'storefront') {
-    const existing = projects.find((project) => project.id === id);
+  const [pending, setPending] = useState(false);
+  const [removed, setRemoved] = useState(false);
+  useEffect(() => {
+    if (serverMode) void dispatch(loadProjects());
+  }, [dispatch]);
+  async function openExample(id = 'storefront') {
+    if (serverMode) {
+      setPending(true);
+      setError('');
+      try {
+        const project = await dispatch(openDemo()).unwrap();
+        void navigate('/projects/' + project.id);
+      } catch (value) {
+        setError(messageFor(value));
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+    const existing = localProjects.find((project) => project.id === id);
     if (!existing) {
       if (projects.length >= 30) {
         setError('Можно сохранить до 30 проектов.');
@@ -46,20 +82,41 @@ export function ProjectsPage() {
     }
     void navigate(`/projects/${id}`);
   }
+  async function remove(project: Project | ProjectSummary) {
+    setDeleting(undefined);
+    if (!serverMode) {
+      dispatch(projectRemoved(project.id));
+      return;
+    }
+    setPending(true);
+    setError('');
+    setRemoved(false);
+    try {
+      await dispatch(deleteProject(project.id)).unwrap();
+      setRemoved(true);
+    } catch (value) {
+      setError(messageFor(value));
+    } finally {
+      setPending(false);
+    }
+  }
   return (
     <>
       <PageHeading
         title="Проекты"
         actions={
           <>
-            <button
-              className="button secondary"
-              onClick={() => {
-                void openExample();
-              }}
-            >
-              Открыть пример
-            </button>
+            {!serverMode || capabilities?.demo ? (
+              <button
+                className="button secondary"
+                disabled={pending}
+                onClick={() => {
+                  void openExample();
+                }}
+              >
+                {serverMode ? 'Открыть демопроект' : 'Открыть пример'}
+              </button>
+            ) : null}
             <Link className="button primary" to="/projects/new">
               <PlusIcon size={17} />
               Новый проект
@@ -68,38 +125,52 @@ export function ProjectsPage() {
         }
       />
       {error ? <Notice kind="error">{error}</Notice> : null}
-      <details className="examples-library" open>
-        <summary>Шесть исходных проектов для демонстрации</summary>
-        <p className="muted">
-          {browserChecksEnabled
-            ? 'Проверка исходных интерфейсов в Playwright: отказы API, скриншоты и результаты по пунктам.'
-            : 'В демо открываются исходные интерфейсы. На GitHub Pages их API заменён локальными ответами; проверки в FaultView остаются учебной симуляцией.'}
-        </p>
-        <div className="examples-list">
-          {exampleProjects.map((example) => (
-            <article key={example.id}>
-              <h2>{example.name}</h2>
-              <button className="button secondary" onClick={() => openExample(example.id)}>
-                Проверить {example.name}
-              </button>
-              <a href={exampleUrl(example.id)} target="_blank" rel="noreferrer">
-                Открыть исходный frontend ↗
-              </a>
-            </article>
-          ))}
-        </div>
-      </details>
-      {projects.length ? (
+      {removed ? <Notice kind="success">Проект удалён.</Notice> : null}
+      {serverMode ? null : (
+        <details className="examples-library" open>
+          <summary>Шесть исходных проектов для демонстрации</summary>
+          <p className="muted">
+            {browserChecksEnabled
+              ? 'Проверка исходных интерфейсов в Playwright: отказы API, скриншоты и результаты по пунктам.'
+              : 'В демо открываются исходные интерфейсы. На GitHub Pages их API заменён локальными ответами; проверки в FaultView остаются учебной симуляцией.'}
+          </p>
+          <div className="examples-list">
+            {exampleProjects.map((example) => (
+              <article key={example.id}>
+                <h2>{example.name}</h2>
+                <button className="button secondary" onClick={() => void openExample(example.id)}>
+                  Проверить {example.name}
+                </button>
+                <a href={exampleUrl(example.id)} target="_blank" rel="noreferrer">
+                  Открыть исходный frontend ↗
+                </a>
+              </article>
+            ))}
+          </div>
+        </details>
+      )}
+      {serverMode && (list === 'idle' || list === 'loading') && !projects.length ? (
+        <Busy>Загружаем проекты…</Busy>
+      ) : serverMode && list === 'error' ? (
+        <>
+          <Notice kind="error">{listError}</Notice>
+          <button className="button secondary" onClick={() => void dispatch(loadProjects())}>
+            Повторить
+          </button>
+        </>
+      ) : projects.length ? (
         <div className="project-grid">
           {projects.map((project) => {
-            const discovery = latestDiscovery(project);
+            const discovery = 'jobs' in project ? latestDiscovery(project) : undefined;
+            const status =
+              'jobs' in project ? project.jobs[0]?.status : project.latestDiscoveryStatus;
             return (
               <article className="project-card" key={project.id}>
                 <div className="project-card-top">
                   <span className="project-avatar">
                     <FolderSimpleIcon size={25} />
                   </span>
-                  <StatusBadge status={project.jobs[0]?.status ?? 'ready'} />
+                  <StatusBadge status={status ?? 'ready'} />
                 </div>
                 <Link className="project-title" to={`/projects/${project.id}`}>
                   {project.name}
@@ -107,24 +178,28 @@ export function ProjectsPage() {
                 </Link>
                 <p className="project-url">{project.frontendUrl}</p>
                 <p className="project-description">{project.description || ''}</p>
-                <div className="project-card-stats">
-                  <span>
-                    Страницы <strong>{discovery?.graph?.routes.length ?? '—'}</strong>
-                  </span>
-                  <span>
-                    Связи <strong>{discovery?.graph?.routeDependencies.length ?? '—'}</strong>
-                  </span>
-                  <span>
-                    Графы <strong>{project.jobs.length}</strong>
-                  </span>
-                </div>
+                {'jobs' in project ? (
+                  <div className="project-card-stats">
+                    <span>
+                      Страницы <strong>{discovery?.graph?.routes.length ?? '—'}</strong>
+                    </span>
+                    <span>
+                      Связи <strong>{discovery?.graph?.routeDependencies.length ?? '—'}</strong>
+                    </span>
+                    <span>
+                      Графы <strong>{project.jobs.length}</strong>
+                    </span>
+                  </div>
+                ) : null}
                 <div className="project-card-footer">
                   <span>{dateLabel(project.createdAt)}</span>
                   <button
                     className="icon-button"
                     aria-label={`Удалить проект ${project.name}`}
                     disabled={
-                      active?.projectId === project.id || activeRun?.projectId === project.id
+                      pending ||
+                      active?.projectId === project.id ||
+                      activeRun?.projectId === project.id
                     }
                     onClick={() => setDeleting(project)}
                   >
@@ -157,7 +232,9 @@ export function ProjectsPage() {
             </Link>
           }
         >
-          Создайте проект с вашей спецификацией или начните с готового Storefront.
+          {serverMode && !capabilities?.demo
+            ? 'Создайте проект и загрузите спецификацию OpenAPI.'
+            : 'Создайте проект с вашей спецификацией или начните с готового Storefront.'}
         </EmptyState>
       )}
       {deleting ? (
@@ -165,13 +242,11 @@ export function ProjectsPage() {
           title={`Удалить ${deleting.name}?`}
           confirm="Удалить проект"
           onClose={() => setDeleting(undefined)}
-          onConfirm={() => {
-            dispatch(projectRemoved(deleting.id));
-            setDeleting(undefined);
-          }}
+          onConfirm={() => void remove(deleting)}
         >
-          Настройки, история и сохранённые планы будут удалены из этого браузера. Сначала
-          экспортируйте данные, если они нужны.
+          {serverMode
+            ? 'Проект, отчёты и скриншоты будут удалены из аккаунта.'
+            : 'Настройки, история и сохранённые планы будут удалены из этого браузера.'}
         </ConfirmDialog>
       ) : null}
     </>
