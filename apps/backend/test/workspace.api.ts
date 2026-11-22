@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { loadDemo } from '../src/workspace/demo.js';
 import { createWorkspaceApp } from '../src/workspace/app.js';
 import { createPool, migrate } from '../src/workspace/db.js';
 
@@ -27,15 +28,38 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   const url = new URL(connectionString);
   url.searchParams.set('options', '-c search_path=' + schema);
   const pool = createPool(url.href);
+  let app: Awaited<ReturnType<typeof createWorkspaceApp>> | undefined;
   t.after(async () => {
+    await app?.close();
     await pool.end();
     await control.query('DROP SCHEMA ' + schema + ' CASCADE');
     await control.end();
   });
   await migrate(pool);
-  const config = { pool, clientOrigins: [origin], secureCookies: true };
-  let app = await createWorkspaceApp(config);
-  t.after(() => app.close());
+  const images = new Map<string, Buffer>();
+  const deleted: string[] = [];
+  const config = {
+    pool,
+    clientOrigins: [origin],
+    secureCookies: true,
+    demo: await loadDemo('https://demo.example/'),
+    execution: {
+      demoOnly: true,
+      targetOrigins: ['https://demo.example'],
+      storage: {
+        put: async (key: string, bytes: Buffer) => {
+          images.set(key, bytes);
+        },
+        get: async (key: string) => images.get(key) ?? Buffer.alloc(0),
+        delete: async (key: string) => {
+          deleted.push(key);
+          images.delete(key);
+        },
+        close: () => undefined,
+      },
+    },
+  };
+  app = await createWorkspaceApp(config);
   const auth = '/api/v1/auth/';
   const base = '/api/v1/projects';
   const password = 'faultview test password';
@@ -46,7 +70,7 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
     cookie?: string,
     caller = origin,
   ) {
-    return app.inject({
+    return app!.inject({
       method,
       url,
       payload,
@@ -132,14 +156,98 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   assert.equal(patch.statusCode, 200);
   assert.equal(patch.json().description, input.description);
 
+  const demo = await call('POST', base + '/demo', undefined, session);
+  assert.equal(demo.statusCode, 201);
+  const demoPath = base + '/' + demo.json().id;
+  assert.equal((await call('POST', base + '/demo', undefined, session)).json().id, demo.json().id);
+  assert.equal(
+    (await call('PATCH', demoPath, { frontendUrl: 'https://elsewhere.test' }, session)).statusCode,
+    409,
+  );
+  assert.equal((await call('POST', path + '/discoveries', undefined, session)).statusCode, 403);
+  assert.equal((await call('POST', path + '/discoveries', undefined, other)).statusCode, 404);
+  assert.equal((await call('GET', '/runs/' + randomUUID(), undefined, session)).statusCode, 404);
+
+  const runIds = [randomUUID(), randomUUID(), randomUUID()];
+  const projectId = created.json().id as string;
+  const graphId = randomUUID();
+  for (const [index, runId] of runIds.entries()) {
+    const state = {
+      id: runId,
+      status: index === 2 ? 'running' : 'completed',
+      source: 'playwright',
+      plan: {
+        discoveryId: graphId,
+        mode: 'endpoint',
+        targetId: 'GET /api/products',
+        profiles: ['http500'],
+        excludedRouteIds: [],
+      },
+      createdAt: new Date().toISOString(),
+      progress: { completed: 1, total: 1 },
+      warnings: [],
+      results: [
+        {
+          routeId: '/products',
+          endpointId: 'GET /api/products',
+          profile: 'http500',
+          verdict: index ? 'PASS' : 'FAIL',
+          durationMs: 500,
+          reason: 'fixture',
+        },
+      ],
+    };
+    await pool.query('INSERT INTO runs (id, project_id, state) VALUES ($1, $2, $3)', [
+      runId,
+      projectId,
+      state,
+    ]);
+  }
+  const compare = (candidate: string) =>
+    path + '/runs/compare?baseline=' + runIds[0] + '&candidate=' + candidate;
+  assert.equal((await call('GET', compare(runIds[0]!), undefined, session)).statusCode, 400);
+  assert.equal((await call('GET', compare(runIds[2]!), undefined, session)).statusCode, 409);
+  assert.equal((await call('GET', compare(runIds[1]!), undefined, other)).statusCode, 404);
+  assert.equal(
+    (await call('GET', compare(runIds[1]!), undefined, session)).json().cases[0].change,
+    'improved',
+  );
+  const screenshot = path + '/runs/' + runIds[0] + '/screenshots/0-final';
+  const objectKey = 'fixture/private.jpg';
+  images.set(objectKey, Buffer.from('test jpeg'));
+  await pool.query(
+    'INSERT INTO screenshots (run_id, name, object_key, bytes, ready) VALUES ($1, $2, $3, $4, true)',
+    [runIds[0], '0-final', objectKey, 9],
+  );
+  assert.equal((await call('GET', screenshot, undefined, other)).statusCode, 404);
+  assert.equal((await call('GET', screenshot)).statusCode, 401);
+  assert.equal(
+    (await call('GET', screenshot.replace('0-final', 'unknown'), undefined, session)).statusCode,
+    400,
+  );
+  const photo = await call('GET', screenshot, undefined, session);
+  assert.equal(photo.statusCode, 200);
+  assert.equal(photo.headers['cache-control'], 'no-store');
+  assert.equal(photo.headers['content-type'], 'image/jpeg');
+
   await app.close();
   await migrate(pool);
   app = await createWorkspaceApp(config);
   const read = await call('GET', path, undefined, session);
   assert.equal(read.statusCode, 200);
   assert.equal(read.json().name, 'Updated');
+  assert.equal(
+    read.json().runs.find((run: { id: string }) => run.id === runIds[2]).status,
+    'failed',
+  );
   assert.equal((await call('DELETE', path, undefined, session)).statusCode, 204);
   assert.equal((await call('GET', path, undefined, session)).statusCode, 404);
+  assert.equal((await call('GET', screenshot, undefined, session)).statusCode, 404);
+  const deletion = await pool.query(
+    'SELECT object_key FROM screenshot_deletions WHERE object_key = $1',
+    [objectKey],
+  );
+  assert.ok(deletion.rowCount || deleted.includes(objectKey));
   assert.equal((await call('POST', auth + 'logout', undefined, session)).statusCode, 204);
   assert.equal((await call('GET', auth + 'session', undefined, session)).statusCode, 401);
 });

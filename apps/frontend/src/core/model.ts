@@ -210,6 +210,7 @@ export const runSchema = z.object({
   plan: planInputSchema,
   progress: z.object({ completed: z.number(), total: z.number() }),
   results: z.array(caseResultSchema),
+  summary: z.object({ failures: z.number().int(), warnings: z.number().int() }).optional(),
   warnings: z.array(z.string()),
   error: z.object({ code: z.string(), message: z.string() }).optional(),
 });
@@ -217,6 +218,7 @@ export type TestRun = z.infer<typeof runSchema>;
 export const projectSchema = projectInputSchema.extend({
   checks: checksSchema.optional(),
   id: z.string(),
+  isDemo: z.boolean().optional(),
   createdAt: z.string(),
   jobs: z.array(jobSchema).max(20),
   excludedRouteIds: z.array(z.string()),
@@ -224,6 +226,10 @@ export const projectSchema = projectInputSchema.extend({
   runs: z.array(runSchema).max(5).optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
+export const projectSummarySchema = projectSchema
+  .omit({ specification: true, jobs: true, plans: true, runs: true })
+  .extend({ latestDiscoveryStatus: jobSchema.shape.status.optional() });
+export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 export const workspaceSchema = z.object({
   executionMode: z.enum(['live', 'simulation']).default('live'),
   version: z.literal(2),

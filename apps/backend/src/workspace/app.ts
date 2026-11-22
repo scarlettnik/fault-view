@@ -6,12 +6,16 @@ import type { Pool } from 'pg';
 import { ZodError } from 'zod';
 import { InputError } from '../types.js';
 import { createAuth } from './auth.js';
-import { registerProjects } from './projects.js';
+import { registerProjects, type Settings } from './projects.js';
+import { WorkspaceExecutions, type ExecutionConfig } from './executions.js';
+import { registerExecutionRoutes } from './execution-routes.js';
 
 export interface WorkspaceConfig {
   pool: Pool;
   clientOrigins: string[];
   secureCookies: boolean;
+  demo?: Settings;
+  execution?: ExecutionConfig;
 }
 
 export async function createWorkspaceApp(config: WorkspaceConfig) {
@@ -84,6 +88,17 @@ export async function createWorkspaceApp(config: WorkspaceConfig) {
   });
   const auth = createAuth(config.pool, config.secureCookies);
   auth.register(app);
-  registerProjects(app, config.pool, auth);
+  registerProjects(app, config.pool, auth, config.demo);
+  const execution = new WorkspaceExecutions(
+    config.pool,
+    config.execution ?? { demoOnly: true, targetOrigins: [] },
+  );
+  registerExecutionRoutes(app, config.pool, auth, execution);
+  app.get('/api/v1/capabilities', () => ({
+    demo: !!config.demo,
+    demoOnly: config.execution?.demoOnly ?? true,
+  }));
+  app.addHook('onClose', () => execution.close());
+  await execution.start();
   return app;
 }

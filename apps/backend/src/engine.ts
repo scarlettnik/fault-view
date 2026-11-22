@@ -10,6 +10,8 @@ import { InputError, type DiscoveryInput, type Job } from './types.js';
 export interface RunnerConfig {
   targetOrigins: string[];
   executablePath?: string;
+  chromiumSandbox?: boolean;
+  allowDemoAdapters?: boolean;
   navigationTimeoutMs?: number;
   observationMs?: number;
 }
@@ -27,17 +29,6 @@ function adaptedDemo(raw: string) {
   const index = parts.indexOf('examples');
   return index >= 0 && demoIds.has(parts[index + 1] ?? '');
 }
-function runUrl(raw: string, profile: string, endpoint?: string) {
-  const url = new URL(raw);
-  if (adaptedDemo(raw)) {
-    url.searchParams.set('fault', profile);
-    url.searchParams.set('live', '1');
-    if (endpoint) url.searchParams.set('target', endpoint);
-    else url.searchParams.delete('target');
-  }
-  return url.href;
-}
-
 export function finalizeNetworkEvidence(result: CaseResult) {
   if (result.verdict === 'ERROR') return;
   // An adapter injection confirms that the target request happened, even when
@@ -70,6 +61,19 @@ export class BrowserEngine {
   private browser?: Promise<Browser>;
   private contexts = new Set<BrowserContext>();
   constructor(private config: RunnerConfig) {}
+  private useDemoAdapter(url: string) {
+    return this.config.allowDemoAdapters !== false && adaptedDemo(url);
+  }
+  private runUrl(raw: string, profile: string, endpoint?: string) {
+    const url = new URL(raw);
+    if (this.useDemoAdapter(raw)) {
+      url.searchParams.set('fault', profile);
+      url.searchParams.set('live', '1');
+      if (endpoint) url.searchParams.set('target', endpoint);
+      else url.searchParams.delete('target');
+    }
+    return url.href;
+  }
   async close() {
     await Promise.all([...this.contexts].map((context) => context.close().catch(() => undefined)));
     await this.browser?.then((browser) => browser.close());
@@ -84,7 +88,12 @@ export class BrowserEngine {
     const policy = networkPolicy(this.config.targetOrigins);
     policy.assert(url);
     this.browser ??= chromium
-      .launch({ headless: true, executablePath: this.config.executablePath })
+      .launch({
+        headless: true,
+        executablePath: this.config.executablePath,
+        chromiumSandbox: this.config.chromiumSandbox,
+        args: ['--disable-background-networking', '--disable-quic'],
+      })
       .catch((error: unknown) => {
         this.browser = undefined;
         throw error;
@@ -92,7 +101,7 @@ export class BrowserEngine {
     const browser = await this.browser;
     signal.throwIfAborted();
     const context = await browser.newContext({
-      serviceWorkers: adaptedDemo(url) ? 'allow' : 'block',
+      serviceWorkers: this.useDemoAdapter(url) ? 'allow' : 'block',
       viewport: { width: 1440, height: 900 },
       acceptDownloads: false,
       permissions: [],
@@ -152,7 +161,7 @@ export class BrowserEngine {
   async discover(
     input: DiscoveryInput,
     signal: AbortSignal,
-    progress: (value: Job['progress']) => void,
+    progress: (value: Job['progress']) => void | Promise<void>,
   ): Promise<Graph> {
     const start = publicUrl(input.frontendUrl);
     const base = httpUrl(start);
@@ -190,11 +199,11 @@ export class BrowserEngine {
           });
           page.on('requestfinished', (request) => pending.delete(request));
           page.on('requestfailed', (request) => pending.delete(request));
-          const response = await page.goto(runUrl(url, 'healthy'), {
+          const response = await page.goto(this.runUrl(url, 'healthy'), {
             waitUntil: 'domcontentloaded',
             timeout: this.config.navigationTimeoutMs ?? 10_000,
           });
-          if (adaptedDemo(url))
+          if (this.useDemoAdapter(url))
             await page.locator('html[data-examples-ready]').waitFor({ timeout: 10_000 });
           const good = !!response && response.status() < 400;
           if (!good) route.status = 'error';
@@ -236,7 +245,7 @@ export class BrowserEngine {
       routes.push(route);
       for (const endpointId of observed)
         dependencies.push({ routeId: id, endpointId, provenance: 'browser-network' });
-      progress({ completed: routes.length, discovered: queue.length });
+      await progress({ completed: routes.length, discovered: queue.length });
     }
     return {
       ...input.catalog,
@@ -304,11 +313,11 @@ export class BrowserEngine {
             });
             page.on('requestfinished', (request) => pending.delete(request));
             page.on('requestfailed', (request) => pending.delete(request));
-            const response = await page.goto(runUrl(url, 'healthy'), {
+            const response = await page.goto(this.runUrl(url, 'healthy'), {
               waitUntil: 'domcontentloaded',
               timeout: this.config.navigationTimeoutMs ?? 10_000,
             });
-            if (adaptedDemo(url))
+            if (this.useDemoAdapter(url))
               await page.locator('html[data-examples-ready]').waitFor({ timeout: 10_000 });
             const observation = await observeUi(
               page,
@@ -328,7 +337,7 @@ export class BrowserEngine {
         result.baselineScreenshot = baseline.image;
         let injecting = test.profile !== 'healthy';
         let phase: 'fault' | 'restored' = 'fault';
-        const adapted = adaptedDemo(url);
+        const adapted = this.useDemoAdapter(url);
         await this.withPage(
           url,
           signal,
@@ -404,7 +413,7 @@ export class BrowserEngine {
                 result.network.push({ endpointId: target.id, failed: true, phase });
             });
             const navigate = async (profile: string) => {
-              const response = await page.goto(runUrl(url, profile, endpoint.path), {
+              const response = await page.goto(this.runUrl(url, profile, endpoint.path), {
                 waitUntil: 'domcontentloaded',
                 timeout: this.config.navigationTimeoutMs ?? 10_000,
               });

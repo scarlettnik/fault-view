@@ -2,8 +2,10 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { createWorkspaceApp } from './workspace/app.js';
 import { createPool, migrate } from './workspace/db.js';
+import { loadDemo } from './workspace/demo.js';
+import { createScreenshotStorage } from './workspace/screenshots.js';
 
-const port = Number(process.env.FAULTVIEW_RUNNER_PORT ?? 3001);
+const port = Number(process.env.PORT ?? process.env.FAULTVIEW_RUNNER_PORT ?? 3001);
 const defaults = [
   'http://127.0.0.1:4173',
   'http://localhost:4173',
@@ -35,7 +37,26 @@ const app = await (async () => {
   }
   try {
     await migrate(pool);
-    return await createWorkspaceApp({ pool, clientOrigins, secureCookies: production });
+    const demo = await loadDemo(process.env.FAULTVIEW_DEMO_URL);
+    const targetOrigins = demo ? [new URL(demo.frontendUrl).origin] : [];
+    if (!production && process.env.FAULTVIEW_TARGET_ORIGINS)
+      targetOrigins.push(...origins(process.env.FAULTVIEW_TARGET_ORIGINS));
+    const storage = createScreenshotStorage(process.env);
+    if (production && demo && !storage)
+      throw new Error('Configure private S3 storage to enable public demo runs.');
+    return await createWorkspaceApp({
+      pool,
+      clientOrigins,
+      secureCookies: production,
+      demo,
+      execution: {
+        demoOnly: production,
+        targetOrigins,
+        storage,
+        chromiumSandbox: production,
+        executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      },
+    });
   } catch (error) {
     await pool.end();
     throw error;
