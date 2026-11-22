@@ -101,8 +101,13 @@ export async function createWorkspaceApp(config: WorkspaceConfig) {
   );
 
   app.get('/health', async () => {
-    await config.pool.query('SELECT 1');
-    return { status: 'ok', service: 'faultview-api' };
+    try {
+      await config.pool.query('SELECT 1');
+      await config.execution?.storage?.ready();
+      return { status: 'ok', service: 'faultview-api' };
+    } catch {
+      throw new InputError('Хранилище временно недоступно.', 'DEPENDENCY_UNAVAILABLE', 503);
+    }
   });
   if (config.spaDirectory) {
     await app.register(serveStatic, {

@@ -38,6 +38,7 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   await migrate(pool);
   const images = new Map<string, Buffer>();
   const deleted: string[] = [];
+  let storageAvailable = true;
   const config = {
     pool,
     clientOrigins: [origin],
@@ -47,6 +48,9 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
       demoOnly: true,
       targetOrigins: ['https://demo.example'],
       storage: {
+        ready: async () => {
+          if (!storageAvailable) throw new Error('failing test storage');
+        },
         put: async (key: string, bytes: Buffer) => {
           images.set(key, bytes);
         },
@@ -60,6 +64,12 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
     },
   };
   app = await createWorkspaceApp(config);
+  assert.equal((await app.inject('/health')).statusCode, 200);
+  storageAvailable = false;
+  const unavailable = await app.inject('/health');
+  assert.equal(unavailable.statusCode, 503);
+  assert.equal(unavailable.json().code, 'DEPENDENCY_UNAVAILABLE');
+  storageAvailable = true;
   const auth = '/api/v1/auth/';
   const base = '/api/v1/projects';
   const password = 'faultview test password';

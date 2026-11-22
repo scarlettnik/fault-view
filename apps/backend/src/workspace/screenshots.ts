@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -11,6 +12,7 @@ export const screenshotName = z.string().regex(/^\d{1,3}-(baseline|fault|final)$
 export const imageLimit = 1_000_000;
 
 export interface ScreenshotStorage {
+  ready(): Promise<void>;
   put(key: string, bytes: Buffer, signal: AbortSignal): Promise<void>;
   get(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;
@@ -51,6 +53,11 @@ export function createScreenshotStorage(env: NodeJS.ProcessEnv): ScreenshotStora
   });
 
   return {
+    async ready() {
+      await client.send(new HeadBucketCommand({ Bucket: bucket }), {
+        abortSignal: AbortSignal.timeout(2_500),
+      });
+    },
     async put(key, bytes, signal) {
       await client.send(
         new PutObjectCommand({
