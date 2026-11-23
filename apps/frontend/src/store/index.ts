@@ -11,7 +11,6 @@ function loadWorkspace(): Workspace {
   try {
     const raw = localStorage.getItem(storageKey);
     const stored = workspaceSchema.parse(raw ? JSON.parse(raw) : { version: 2, projects: [] });
-    // A reload interrupts local timers; pending work must not remain permanently busy.
     const projects: Project[] = stored.projects.map((project) => ({
       ...project,
       jobs: project.jobs.map((job) =>

@@ -1,4 +1,3 @@
-// Pure cascade logic is shared by previews and local simulations.
 import { buildPlan, MAX_RUN_CASES, planExecutionProblem } from './cascade';
 import type { Graph, PlanInput } from './model';
 

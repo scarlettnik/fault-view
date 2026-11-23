@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 process.chdir(fileURLToPath(new URL('../../', import.meta.url)));
-import { readFile, access } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
@@ -17,12 +18,7 @@ const roots = [
 ];
 for (const [root, entry] of roots) {
   const cwd = resolve('examples/open-source/sources', root);
-  try {
-    await access(resolve(cwd, entry));
-    continue;
-  } catch {
-    /* Install the original locked dependencies. */
-  }
+  if (existsSync(resolve(cwd, entry))) continue;
   const result = spawnSync(
     'npm',
     ['ci', '--ignore-scripts', '--legacy-peer-deps', '--no-audit', '--no-fund'],

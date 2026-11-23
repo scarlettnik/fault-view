@@ -32,7 +32,6 @@ export interface UiObservation {
   assertions: Assertion[];
   headingHashes: string[];
   customReady: boolean;
-  // Structural collection keys stay inside the evaluator; exports contain counts only.
   collections?: { key: string; count: number; itemHashes?: string[] }[];
 }
 interface Activity {
@@ -246,7 +245,6 @@ export async function observeUi(
       previous = signature;
       stableSince = Date.now();
     }
-    // A visible shell/body must not finish the check before the API response and rendering.
     if (
       !observation.summary.loading &&
       activity.pending() === 0 &&

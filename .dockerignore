@@ -1,10 +1,12 @@
 .git
 .agents
 .codex
+.codebase-memory
 .aws
 .idea
 **/.env*
 **/node_modules
+**/playwright-report
 **/dist
 **/data
 **/test-results

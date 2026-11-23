@@ -48,7 +48,6 @@ export async function serveExample(url, res) {
   if (relative === 'api' || relative.startsWith('api/')) {
     try {
       const fixtures = await (fixturePromise ??= loadFixtures());
-      // Each request sees the same fixtures, independent of other users and runs.
       const state = initialState(id, fixtures);
       const result = apiResponse(
         id,
