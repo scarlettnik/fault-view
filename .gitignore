@@ -3,13 +3,11 @@ node_modules/
 .vscode/
 .DS_Store
 
-# Local secrets; commit only documented, non-secret examples.
 .env
 .env.*
 !.env.example
 !.env.*.example
 
-# Generated output and local caches for each application.
 dist/
 build/
 coverage/
