@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ExecutePlan } from '../components/Execution';
 import {
   ArrowDownIcon,
@@ -9,7 +9,10 @@ import {
   PathIcon,
   PlayIcon,
 } from '@phosphor-icons/react';
-import { executePlan } from '../store/operations';
+import { selectBusy } from '../store/selectors';
+import { useRunNavigation } from '../hooks/useRunNavigation';
+import { serverMode } from '../core/workspaceApi';
+import { saveServerPlan } from '../store/server';
 import { usePreparedPlan } from '../hooks/usePreparedPlan';
 import {
   allProfiles,
@@ -116,8 +119,8 @@ export function PlanCases({ saved }: { saved: SavedPlan }) {
 export function PlansPage() {
   const project = useProject();
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const busy = useAppSelector((state) => !!state.workspace.active || !!state.workspace.activeRun);
+  const { startRun, starting } = useRunNavigation(project.id);
+  const busy = useAppSelector((state) => selectBusy(state, project.id));
   const [params] = useSearchParams();
   const job = latestDiscovery(project);
   const graph = job?.graph;
@@ -131,6 +134,7 @@ export function PlansPage() {
   const [profiles, setProfiles] = useState<Profile[]>([...allProfiles]);
   const { prepare, isPreparing } = usePreparedPlan(project.id);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState<{ key: string; saved: SavedPlan }>();
   if (!job || !graph)
     return (
@@ -163,6 +167,7 @@ export function PlansPage() {
   const preview = previewPlan(graph, input);
   async function submit(alsoRun = false) {
     setError('');
+    setSaving(true);
     try {
       const prepared = await prepare(input);
       const result = prepared.result;
@@ -170,21 +175,25 @@ export function PlansPage() {
         const problem = planExecutionProblem(result);
         if (problem) throw new Error(problem.message);
       }
-      const saved: SavedPlan = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        input: prepared.input,
-        result,
-      };
-      dispatch(planSaved({ projectId: project.id, plan: saved }));
+      const saved: SavedPlan = serverMode
+        ? (
+            await dispatch(
+              saveServerPlan({ projectId: project.id, input: prepared.input }),
+            ).unwrap()
+          ).plan
+        : {
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            input: prepared.input,
+            result,
+          };
+      if (!serverMode) dispatch(planSaved({ projectId: project.id, plan: saved }));
       setGenerated({ key: JSON.stringify(prepared.input), saved });
-      if (alsoRun) {
-        const task = dispatch(executePlan({ projectId: project.id, plan: prepared.input }));
-        void task.unwrap().catch(() => undefined);
-        void navigate(`/projects/${project.id}/runs/${task.requestId}`);
-      }
+      if (alsoRun) await startRun(saved.input);
     } catch (value) {
       setError(messageFor(value));
+    } finally {
+      setSaving(false);
     }
   }
   return (
@@ -313,7 +322,7 @@ export function PlansPage() {
           {!result ? (
             <button
               className="button primary"
-              disabled={busy || isPreparing || !targetId || !!preview.problem}
+              disabled={busy || isPreparing || saving || starting || !targetId || !!preview.problem}
               onClick={() => {
                 void submit(true);
               }}
@@ -330,7 +339,7 @@ export function PlansPage() {
           ) : null}
           <button
             className="button secondary plan-only"
-            disabled={busy || isPreparing || !targetId || !!preview.problem}
+            disabled={busy || isPreparing || saving || starting || !targetId || !!preview.problem}
             onClick={() => {
               void submit();
             }}

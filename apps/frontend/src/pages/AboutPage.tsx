@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { isPlaywrightEnabled } from '../core/runner';
+import { serverMode } from '../core/workspaceApi';
 import { PageHeading } from '../components/ui';
 import { useAppSelector } from '../store';
 export function AboutPage() {
@@ -16,12 +17,18 @@ export function AboutPage() {
           план и результаты симуляции.
         </p>
         <p>
-          {browserChecksEnabled
-            ? 'Playwright открывает приложение, применяет отказы API и проверяет интерфейс по нескольким критериям. Скриншоты и результаты хранятся на локальном сервере.'
-            : 'В статической версии выполняется учебная симуляция. Для браузерной проверки и скриншотов используйте локальный запуск npm run dev:all.'}
+          {serverMode
+            ? 'Проекты и отчёты сохраняются в аккаунте. Playwright проверяет реакцию интерфейса на отказы API и делает скриншоты.'
+            : browserChecksEnabled
+              ? 'Playwright открывает приложение, применяет отказы API и проверяет интерфейс по нескольким критериям. Скриншоты и результаты хранятся на локальном сервере.'
+              : 'В статической версии выполняется учебная симуляция. Для браузерной проверки и скриншотов используйте локальный запуск npm run dev:all.'}
         </p>
-        <p>Проекты и история сохраняются в этом браузере.</p>
-        <Link to="/runner">Подключение Playwright</Link>
+        {serverMode ? null : (
+          <>
+            <p>Проекты и история сохраняются в этом браузере.</p>
+            <Link to="/runner">Подключение Playwright</Link>
+          </>
+        )}
       </section>
     </>
   );

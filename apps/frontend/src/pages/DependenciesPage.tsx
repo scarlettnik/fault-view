@@ -7,8 +7,7 @@ import {
   TrashIcon,
 } from '@phosphor-icons/react';
 import { latestDiscovery } from '../core/model';
-import { useAppDispatch } from '../store';
-import { routeExcluded, routeRestored } from '../store/workspace';
+import { useRouteExclusion } from '../hooks/useRouteExclusion';
 import {
   ConfirmDialog,
   EmptyState,
@@ -22,7 +21,7 @@ import { DependencyGraph } from '../components/DependencyGraph';
 
 export function DependenciesPage() {
   const project = useProject();
-  const dispatch = useAppDispatch();
+  const { setExcluded, exclusionError } = useRouteExclusion(project);
   const graph = latestDiscovery(project)?.graph;
   const [tab, setTab] = useState<'graph' | 'routes' | 'endpoints' | 'links'>('graph');
   const [search, setSearch] = useState('');
@@ -52,6 +51,7 @@ export function DependenciesPage() {
   return (
     <>
       <PageHeading title="Карта зависимостей" actions={<ProjectExport project={project} />} />
+      {exclusionError ? <Notice kind="error">{exclusionError}</Notice> : null}
       <div className="graph-summary">
         <div>
           <span className="project-dot" />
@@ -134,7 +134,7 @@ export function DependenciesPage() {
               search={search}
               showExcluded={showExcluded}
               onExclude={setDeleting}
-              onRestore={(routeId) => dispatch(routeRestored({ projectId: project.id, routeId }))}
+              onRestore={(routeId) => void setExcluded(routeId, false)}
             />
           </>
         ) : null}
@@ -209,11 +209,7 @@ export function DependenciesPage() {
                               <button
                                 className="icon-button"
                                 aria-label={`Вернуть маршрут ${route.id}`}
-                                onClick={() =>
-                                  dispatch(
-                                    routeRestored({ projectId: project.id, routeId: route.id }),
-                                  )
-                                }
+                                onClick={() => void setExcluded(route.id, false)}
                               >
                                 <ArrowUUpLeftIcon size={18} />
                               </button>
@@ -346,7 +342,7 @@ export function DependenciesPage() {
           confirm="Удалить маршрут"
           onClose={() => setDeleting(undefined)}
           onConfirm={() => {
-            dispatch(routeExcluded({ projectId: project.id, routeId: deleting }));
+            void setExcluded(deleting, true);
             setDeleting(undefined);
           }}
         >

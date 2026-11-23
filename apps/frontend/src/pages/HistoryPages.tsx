@@ -1,18 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRightIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
-import { dateLabel, downloadJson } from '../core/model';
-import { EmptyState, Notice, PageHeading, ProjectExport, StatusBadge } from '../components/ui';
+import { dateLabel, downloadJson, messageFor, profileInfo, type TestRun } from '../core/model';
+import {
+  Busy,
+  EmptyState,
+  Notice,
+  PageHeading,
+  ProjectExport,
+  StatusBadge,
+} from '../components/ui';
 import { useProject } from './ProjectPages';
 import { PlanCases } from './PlansPage';
 import { ExecutePlan, RunReport } from '../components/Execution';
+import { useAppDispatch } from '../store';
+import { compareServerRuns, loadRun } from '../store/server';
+import { serverMode } from '../core/workspaceApi';
+import type { RunComparison } from '../core/comparison';
 
 export function HistoryPage() {
   const project = useProject();
   const [tab, setTab] = useState<'jobs' | 'plans' | 'runs'>(project.runs?.length ? 'runs' : 'jobs');
+  const canCompare =
+    serverMode && (project.runs?.filter((item) => item.status === 'completed').length ?? 0) >= 2;
   return (
     <>
-      <PageHeading title="История проекта" actions={<ProjectExport project={project} />} />
+      <PageHeading
+        title="История проекта"
+        actions={
+          <>
+            {canCompare ? (
+              <Link className="button secondary" to={`/projects/${project.id}/runs/compare`}>
+                Сравнить прогоны
+              </Link>
+            ) : null}
+            <ProjectExport project={project} />
+          </>
+        }
+      />
       <div className="table-panel">
         <div className="table-toolbar">
           <div className="segmented">
@@ -194,8 +219,12 @@ export function HistoryPage() {
                           {run.progress.completed} / {run.progress.total}
                         </span>
                         <small>
-                          {run.results.filter((result) => result.verdict === 'FAIL').length} FAIL ·{' '}
-                          {run.results.filter((result) => result.verdict === 'WARN').length} WARN
+                          {run.summary?.failures ??
+                            run.results.filter((result) => result.verdict === 'FAIL').length}{' '}
+                          FAIL ·{' '}
+                          {run.summary?.warnings ??
+                            run.results.filter((result) => result.verdict === 'WARN').length}{' '}
+                          WARN
                         </small>
                       </td>
                       <td>
@@ -384,6 +413,8 @@ export function RunDetailsPage() {
   const project = useProject();
   const { runId } = useParams();
   const run = project.runs?.find((item) => item.id === runId);
+  if (serverMode && runId)
+    return <ServerRunDetails key={runId} projectId={project.id} runId={runId} />;
   return (
     <>
       <PageHeading title="Результаты тестирования" />
@@ -400,6 +431,238 @@ export function RunDetailsPage() {
         >
           Запись могла быть вытеснена из локальной истории.
         </EmptyState>
+      )}
+    </>
+  );
+}
+
+function ServerRunDetails({ projectId, runId }: { projectId: string; runId: string }) {
+  const dispatch = useAppDispatch();
+  const [run, setRun] = useState<TestRun>();
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let stopped = false;
+    let timeout: ReturnType<typeof setTimeout>;
+    let abort: (() => void) | undefined;
+    function update() {
+      const task = dispatch(loadRun({ projectId, runId }));
+      abort = task.abort;
+      void task
+        .unwrap()
+        .then((value) => {
+          if (stopped) return;
+          setRun(value);
+          setError('');
+          if (value.status === 'running' || value.status === 'queued')
+            timeout = setTimeout(update, 1200);
+        })
+        .catch((value: unknown) => {
+          if (!stopped) setError(messageFor(value));
+        });
+    }
+    update();
+    return () => {
+      stopped = true;
+      clearTimeout(timeout);
+      abort?.();
+    };
+  }, [dispatch, projectId, runId, retry]);
+  return (
+    <>
+      <PageHeading title="Результаты тестирования" />
+      {error ? (
+        <>
+          <Notice kind="error">{error}</Notice>
+          <button
+            className="button secondary"
+            onClick={() => {
+              setError('');
+              setRetry(retry + 1);
+            }}
+          >
+            Повторить загрузку
+          </button>
+        </>
+      ) : null}
+      {run ? (
+        <RunReport key={run.id} run={run} projectId={projectId} />
+      ) : !error ? (
+        <Busy>Загружаем отчёт…</Busy>
+      ) : null}
+    </>
+  );
+}
+
+const changeLabels = {
+  improved: 'Улучшение',
+  regressed: 'Регрессия',
+  unchanged: 'Без изменений',
+  inconclusive: 'Недостаточно данных',
+  added: 'Новая проверка',
+  removed: 'Только в исходном',
+} as const;
+
+export function CompareRunsPage() {
+  const project = useProject();
+  const dispatch = useAppDispatch();
+  const completed = project.runs?.filter((run) => run.status === 'completed') ?? [];
+  const [baselineId, setBaseline] = useState('');
+  const [candidateId, setCandidate] = useState('');
+  const [result, setResult] = useState<RunComparison>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const baseline = completed.some((run) => run.id === baselineId)
+    ? baselineId
+    : (completed[1]?.id ?? '');
+  const candidate = completed.some((run) => run.id === candidateId)
+    ? candidateId
+    : (completed[0]?.id ?? '');
+  const activeResult =
+    result?.baselineId === baseline && result.candidateId === candidate ? result : undefined;
+
+  async function compare() {
+    setBusy(true);
+    setError('');
+    try {
+      setResult(
+        await dispatch(compareServerRuns({ projectId: project.id, baseline, candidate })).unwrap(),
+      );
+    } catch (value) {
+      setError(messageFor(value));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <PageHeading
+        title="Сравнение прогонов"
+        actions={
+          <Link className="button secondary" to={`/projects/${project.id}/history`}>
+            К истории
+          </Link>
+        }
+      />
+      {completed.length < 2 ? (
+        <EmptyState title="Нужны два завершённых прогона">
+          Запустите проверку ещё раз, чтобы увидеть изменения.
+        </EmptyState>
+      ) : (
+        <form
+          className="comparison-controls"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void compare();
+          }}
+        >
+          <div className="field">
+            <label htmlFor="comparison-baseline">Исходный прогон</label>
+            <select
+              id="comparison-baseline"
+              disabled={busy}
+              value={baseline}
+              onChange={(event) => setBaseline(event.target.value)}
+            >
+              {completed.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {dateLabel(run.createdAt)} · {run.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="comparison-candidate">Прогон для сравнения</label>
+            <select
+              id="comparison-candidate"
+              disabled={busy}
+              value={candidate}
+              onChange={(event) => setCandidate(event.target.value)}
+            >
+              {completed.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {dateLabel(run.createdAt)} · {run.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="button primary"
+            disabled={busy || !baseline || !candidate || baseline === candidate}
+          >
+            {busy ? 'Сравниваем…' : 'Сравнить'}
+          </button>
+        </form>
+      )}
+      {baseline && baseline === candidate ? <Notice>Выберите два разных прогона.</Notice> : null}
+      {error ? <Notice kind="error">{error}</Notice> : null}
+      {activeResult ? <ComparisonResults result={activeResult} /> : null}
+    </>
+  );
+}
+
+function ComparisonResults({ result }: { result: RunComparison }) {
+  const regressions = result.cases.filter((row) => row.change === 'regressed').length;
+  const improvements = result.cases.filter((row) => row.change === 'improved').length;
+  return (
+    <>
+      {result.settingsChanged ? (
+        <Notice>Настройки проверок изменились. Учитывайте это при оценке различий.</Notice>
+      ) : null}
+      <Notice kind="success">
+        Сравнение готово. Регрессий: {regressions}. Улучшений: {improvements}.
+      </Notice>
+      {result.cases.length ? (
+        <div className="table-panel table-scroll">
+          <table>
+            <caption className="sr-only">Результаты сопоставления проверок</caption>
+            <thead>
+              <tr>
+                <th scope="col">Страница и API</th>
+                <th scope="col">Профиль</th>
+                <th scope="col">Было</th>
+                <th scope="col">Стало</th>
+                <th scope="col">Изменение</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.cases.map((row) => (
+                <tr key={JSON.stringify([row.routeId, row.endpointId, row.profile])}>
+                  <th scope="row">
+                    <code>{row.routeId}</code>
+                    <small>{row.endpointId}</small>
+                  </th>
+                  <td>{profileInfo[row.profile].name}</td>
+                  <td>
+                    {row.baseline ? (
+                      <>
+                        <strong>{row.baseline.verdict}</strong>
+                        <small>{row.baseline.reason}</small>
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>
+                    {row.candidate ? (
+                      <>
+                        <strong>{row.candidate.verdict}</strong>
+                        <small>{row.candidate.reason}</small>
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>{changeLabels[row.change]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState title="В этих прогонах нет проверок" />
       )}
     </>
   );

@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { DownloadSimpleIcon, PlayIcon, StopIcon } from '@phosphor-icons/react';
-import { cancelOperation, executePlan } from '../store/operations';
+import { cancelOperation } from '../store/operations';
 import { usePreparedPlan } from '../hooks/usePreparedPlan';
+import { selectBusy } from '../store/selectors';
+import { useRunNavigation } from '../hooks/useRunNavigation';
+import { serverMode } from '../core/workspaceApi';
 import {
   allProfiles,
   dateLabel,
@@ -23,9 +26,8 @@ import { CaseEvidence } from './CaseEvidence';
 export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId: string }) {
   const { prepare, isPreparing } = usePreparedPlan(projectId);
   const [error, setError] = useState('');
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const busy = useAppSelector((store) => !!store.workspace.active || !!store.workspace.activeRun);
+  const { startRun, starting } = useRunNavigation(projectId);
+  const busy = useAppSelector((state) => selectBusy(state, projectId));
   const currentExcluded = useAppSelector(
     (store) =>
       store.workspace.projects.find((project) => project.id === projectId)?.excludedRouteIds,
@@ -47,9 +49,7 @@ export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId:
       const prepared = await prepare(effectiveInput);
       const problem = planExecutionProblem(prepared.result);
       if (problem) throw new Error(problem.message);
-      const task = dispatch(executePlan({ projectId, plan: prepared.input }));
-      void task.unwrap().catch(() => undefined);
-      void navigate(`/projects/${projectId}/runs/${task.requestId}`);
+      await startRun(prepared.input);
     } catch (value) {
       setError(messageFor(value));
     }
@@ -65,12 +65,12 @@ export function ExecutePlan({ saved, projectId }: { saved: SavedPlan; projectId:
         </div>
         <button
           className="button primary"
-          disabled={busy || isPreparing || !!preview.problem}
+          disabled={busy || isPreparing || starting || !!preview.problem}
           onClick={() => {
             void start();
           }}
         >
-          {isPreparing ? (
+          {isPreparing || starting ? (
             <Busy>Запускаем…</Busy>
           ) : (
             <>
@@ -102,12 +102,16 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
   const { prepare, isPreparing } = usePreparedPlan(projectId);
   const [error, setError] = useState('');
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const active = useAppSelector((state) => !!state.workspace.active || !!state.workspace.activeRun);
+  const { startRun, starting } = useRunNavigation(projectId);
+  const active = useAppSelector((state) => selectBusy(state, projectId));
   const currentExcluded = useAppSelector(
     (state) =>
       state.workspace.projects.find((project) => project.id === projectId)?.excludedRouteIds,
   );
+  const currentDiscovery = useAppSelector((state) => {
+    const project = state.workspace.projects.find((item) => item.id === projectId);
+    return project ? latestDiscovery(project)?.id : undefined;
+  });
   const running = run.status === 'queued' || run.status === 'running';
 
   const visible = run.results.filter((result) => filter === 'all' || result.verdict === filter);
@@ -138,14 +142,13 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
     try {
       const plan = {
         ...run.plan,
+        discoveryId: serverMode && currentDiscovery ? currentDiscovery : run.plan.discoveryId,
         excludedRouteIds: [...new Set([...run.plan.excludedRouteIds, ...(currentExcluded ?? [])])],
       };
       const prepared = await prepare(plan);
       const problem = planExecutionProblem(prepared.result);
       if (problem) throw new Error(problem.message);
-      const task = dispatch(executePlan({ projectId, plan: prepared.input }));
-      void task.unwrap().catch(() => undefined);
-      void navigate(`/projects/${projectId}/runs/${task.requestId}`);
+      await startRun(prepared.input);
     } catch (value) {
       setError(messageFor(value));
     }
@@ -189,7 +192,7 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
           ) : (
             <button
               className="button primary"
-              disabled={active || isPreparing}
+              disabled={active || isPreparing || starting}
               onClick={() => {
                 void retry();
               }}
@@ -313,7 +316,7 @@ export function RunReport({ run, projectId }: { run: TestRun; projectId: string 
               ))}
             </select>
           </label>
-          <CaseEvidence result={selected} run={run} />
+          <CaseEvidence result={selected} run={run} projectId={projectId} />
         </>
       ) : (
         <p role="status" className="matrix-empty">

@@ -15,7 +15,8 @@
     "build:storybook": "storybook build --quiet",
     "test:visual": "playwright test --config playwright.visual.config.ts",
     "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
-    "test:site": "playwright test --config playwright.site.config.ts"
+    "test:site": "playwright test --config playwright.site.config.ts",
+    "test:e2e:full": "playwright test --config playwright.fullstack.config.ts"
   },
   "engines": {
     "node": "^22.22.0 || >=24.8.0"

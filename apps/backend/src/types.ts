@@ -30,3 +30,4 @@ export class InputError extends Error {
     super(message);
   }
 }
+export const notFound = () => new InputError('Ресурс не найден.', 'NOT_FOUND', 404);

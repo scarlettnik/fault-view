@@ -1,0 +1,130 @@
+name: faultview
+
+services:
+  proxy:
+    image: scarlettnik/faultview:proxy-dae1fbe55395@sha256:4802501637cef76e98b04fdcb5f909e6590ce69176475e25b910db3667e15cf4
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      FAULTVIEW_PUBLIC_HOST: ${FAULTVIEW_PUBLIC_HOST:?Set the FaultView HTTPS hostname}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - ingress
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    image: scarlettnik/faultview:app-dae1fbe55395@sha256:b01d634e8845e39bbc49def9eae2563a78e291ffa26ce4af2ba11b3d91f2ad78
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    environment:
+      DATABASE_URL: postgresql://faultview:${FAULTVIEW_POSTGRES_PASSWORD:?Generate a PostgreSQL password}@postgres:5432/faultview
+      FAULTVIEW_CLIENT_ORIGINS: https://${FAULTVIEW_PUBLIC_HOST:?Set the FaultView HTTPS hostname}
+      FAULTVIEW_TRUST_PROXY: '1'
+      FAULTVIEW_DEMO_URL: http://demo:4400/
+      FAULTVIEW_S3_ENDPOINT: http://object-store:8333
+      FAULTVIEW_S3_INTERNAL: 'true'
+      FAULTVIEW_S3_PATH_STYLE: 'true'
+      FAULTVIEW_S3_BUCKET: faultview-shots
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Generate an S3 access key}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Generate an S3 secret key}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health').then((r) => { if (!r.ok) process.exitCode = 1 }).catch(() => { process.exitCode = 1 })",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object-store:
+        condition: service_started
+      demo:
+        condition: service_started
+    networks:
+      - ingress
+      - storage
+      - targets
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    shm_size: 512mb
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./deploy/playwright-seccomp.json
+    stop_grace_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: faultview
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${FAULTVIEW_POSTGRES_ADMIN_PASSWORD:?Generate a PostgreSQL admin password}
+      FAULTVIEW_POSTGRES_PASSWORD: ${FAULTVIEW_POSTGRES_PASSWORD:?Generate a PostgreSQL password}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U faultview -d faultview']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/01-faultview.sh:ro
+    networks:
+      - storage
+
+  object-store:
+    image: chrislusf/seaweedfs:4.54
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Generate an S3 access key}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Generate an S3 secret key}
+      S3_BUCKET: faultview-shots
+    volumes:
+      - s3_data:/data
+    networks:
+      - storage
+    security_opt:
+      - no-new-privileges:true
+
+  demo:
+    image: scarlettnik/faultview:demo-dae1fbe55395@sha256:b58fbbede9ffbde5106c4c22fc50ba464e05305c7b06db4e38cc5320eebda259
+    platform: linux/amd64
+    restart: unless-stopped
+    read_only: true
+    networks:
+      - targets
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  ingress:
+  storage:
+    internal: true
+  targets:
+    internal: true
+
+volumes:
+  postgres_data:
+  s3_data:
+  caddy_data:
+  caddy_config:

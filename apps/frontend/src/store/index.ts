@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { workspaceSchema, type Project } from '../core/model';
 import { workspaceReducer, storageFailed, type Workspace } from './workspace';
 import { operationsReducer } from './operations';
+import { serverReducer } from './server';
+import { serverMode } from '../core/workspaceApi';
 
 export const storageKey = 'faultview.workspace.v2';
 function loadWorkspace(): Workspace {
@@ -25,12 +27,14 @@ function loadWorkspace(): Workspace {
   }
 }
 export function createStore(preloaded?: Workspace) {
-  const initial = preloaded ?? loadWorkspace();
+  const initial =
+    preloaded ?? (serverMode ? { projects: [], storageError: false } : loadWorkspace());
   const protectedStorage = initial.storageError;
   const result = configureStore({
-    reducer: { workspace: workspaceReducer, operations: operationsReducer },
+    reducer: { workspace: workspaceReducer, operations: operationsReducer, server: serverReducer },
     preloadedState: { workspace: initial },
   });
+  if (serverMode) return result;
   let previous = result.getState().workspace;
   result.subscribe(() => {
     const state = result.getState().workspace;

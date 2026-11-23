@@ -23,6 +23,8 @@
     "playwright.visual.config.ts",
     "visual",
     "playwright.site.config.ts",
-    "site"
+    "site",
+    "playwright.fullstack.config.ts",
+    "fullstack"
   ]
 }

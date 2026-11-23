@@ -14,3 +14,4 @@ frontend_pro.pdf
 examples/open-source/sources/
 examples/open-source/.runtime/
 examples/storefront/
+deploy/playwright-seccomp.json
