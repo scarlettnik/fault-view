@@ -1,3 +1,5 @@
+name: faultview-local
+
 services:
   proxy:
     environment:

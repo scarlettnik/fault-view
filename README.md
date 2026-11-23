@@ -14,19 +14,15 @@ FaultView показывает, как интерфейс реагирует н�
 
 ## Запуск в Docker из клона
 
-На Linux x86-64 с Docker и Compose v2 выполните:
+На Linux x86-64 с Docker и Compose v2.24.4 или новее выполните:
 
 ```bash
 git clone --branch develop https://github.com/scarlettnik/fault-view.git
 cd fault-view
-bash scripts/start-docker.sh
+cp .env.example .env
 ```
 
-Откройте `http://localhost/app/`. Проверка бэкенда доступна на `http://localhost/health`. Скрипт скачивает готовый комплект из GitHub Releases, проверяет его контрольную сумму и запускает Docker Compose. Для повторного запуска используется скачанный комплект из `dist/`.
-
-### Настройки `.env`
-
-При первом запуске скрипт создаёт `.env` в корне клона. Compose использует пять переменных:
+Заполните в `.env` четыре пустых поля. Для каждого используйте отдельное случайное значение, например вывод `openssl rand -hex 32`.
 
 | Переменная                          | Что хранит                                   |
 | ----------------------------------- | -------------------------------------------- |
@@ -36,19 +32,25 @@ bash scripts/start-docker.sh
 | `AWS_ACCESS_KEY_ID`                 | Идентификатор ключа встроенного хранилища S3 |
 | `AWS_SECRET_ACCESS_KEY`             | Секрет ключа встроенного хранилища S3        |
 
-Скрипт генерирует отдельные случайные значения для паролей и ключей. Сохраните `.env` вместе с резервными копиями томов. Если предыдущая установка использовала `.env.production`, перенесите этот файл в корень клона под именем `.env`, чтобы сохранить доступ к существующим данным.
+```bash
+docker compose up -d
+```
+
+Откройте `http://localhost/app/`. Проверка бэкенда доступна на `http://localhost/health`. Compose скачивает [готовые образы FaultView с Docker Hub](https://hub.docker.com/r/scarlettnik/faultview/tags). Файл `compose.override.yaml` ограничивает локальный доступ адресом `127.0.0.1`.
 
 ### Запуск на VPS
 
 Нужны Linux, Docker Engine с Compose v2 и домен с DNS-записью на публичный IP VPS. Откройте TCP 80/443 для Caddy. Chromium запускается от непривилегированного пользователя с sandbox. Профиль seccomp адаптирован из Playwright 1.65 и разрешает `chroot` с проверкой прав ядром внутри пространства имён Chromium. Ядро VPS должно поддерживать пользовательские пространства имён. [Профиль Playwright 1.65](https://github.com/microsoft/playwright/blob/v1.65.0/utils/docker/seccomp_profile.json)
 
-Из клона запустите `bash scripts/start-docker.sh faultview.example.org`, указав свой домен. Для запуска без интернета перенесите готовый архив, распакуйте его и выполните команды из вложенного README. Архив содержит все пять Docker-образов, Compose-файл и конфигурацию запуска. Compose использует `--no-build --pull never`.
+В `.env` установите `FAULTVIEW_PUBLIC_HOST` равным вашему домену. Запустите основной Compose-файл с настройками HTTPS:
 
-Чтобы собрать новый архив на машине разработчика, выполните `npm run bundle:docker`. Скрипт собирает версию из текущего коммита Git для Linux x86-64 и сохраняет архив в `dist/`. Теги `docker-v*` запускают сборку и публикацию архива в GitHub Releases.
+```bash
+docker compose -f compose.yaml up -d
+```
 
 Compose запускает Caddy, Fastify со статической SPA, PostgreSQL, приватный S3 на SeaweedFS и демостенд в отдельной сети runner. Наружу опубликованы только порты Caddy. PostgreSQL и S3 сохраняют данные в именованных томах. Роль API в PostgreSQL владеет своей базой и не имеет прав суперпользователя сервера.
 
-После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. В разделе **Примеры проектов** доступны Storefront, Spring Petclinic, Conduit / RealWorld, Fullstack Todo, Stan's Robot Shop и React + Express + MongoDB. Выберите проект, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. Для обновления сохраните `.env` и тома, загрузите образы нового комплекта и повторите запуск под тем же именем Compose-проекта. Для резервного копирования сохраните дамп базы PostgreSQL и снимок тома S3. Команда `down -v` удаляет данные.
+После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. В разделе **Примеры проектов** доступны Storefront, Spring Petclinic, Conduit / RealWorld, Fullstack Todo, Stan's Robot Shop и React + Express + MongoDB. Выберите проект, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. При обновлении используйте прежний `.env` и то же имя Compose-проекта. Если использовался файл `.env.production`, перенесите его под именем `.env` с сохранением значений. Команда `down -v` удаляет данные.
 
 ## Локальная разработка
 
@@ -56,10 +58,10 @@ Compose запускает Caddy, Fastify со статической SPA, Postg
 
     nvm use
     npm run setup
-    cp .env.example .env
-    # Укажите в .env DSN PostgreSQL, endpoint и ключи S3.
+    cp .env.dev.example .env.dev
+    # Укажите в .env.dev DSN PostgreSQL, endpoint и ключи S3.
     set -a
-    . ./.env
+    . ./.env.dev
     set +a
     npm run dev:fullstack
 

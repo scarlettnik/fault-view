@@ -2,9 +2,8 @@ name: faultview
 
 services:
   proxy:
-    build:
-      context: .
-      target: proxy
+    image: scarlettnik/faultview:proxy-dae1fbe55395@sha256:4802501637cef76e98b04fdcb5f909e6590ce69176475e25b910db3667e15cf4
+    platform: linux/amd64
     restart: unless-stopped
     environment:
       FAULTVIEW_PUBLIC_HOST: ${FAULTVIEW_PUBLIC_HOST:?Set the FaultView HTTPS hostname}
@@ -23,9 +22,8 @@ services:
       - no-new-privileges:true
 
   app:
-    build:
-      context: .
-      target: api
+    image: scarlettnik/faultview:app-dae1fbe55395@sha256:b01d634e8845e39bbc49def9eae2563a78e291ffa26ce4af2ba11b3d91f2ad78
+    platform: linux/amd64
     restart: unless-stopped
     init: true
     environment:
@@ -107,9 +105,8 @@ services:
       - no-new-privileges:true
 
   demo:
-    build:
-      context: .
-      target: demo
+    image: scarlettnik/faultview:demo-dae1fbe55395@sha256:b58fbbede9ffbde5106c4c22fc50ba464e05305c7b06db4e38cc5320eebda259
+    platform: linux/amd64
     restart: unless-stopped
     read_only: true
     networks:
