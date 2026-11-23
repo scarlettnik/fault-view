@@ -31,9 +31,14 @@ test('account CRUD uses the real API and persists in a new browser session', asy
   const email = await register(page, true);
   await expect(page.getByRole('heading', { name: 'Нет проектов' })).toBeVisible();
   const examples = page.getByRole('region', { name: 'Примеры проектов' });
-  await expect(examples.getByRole('heading', { name: 'Storefront · демопроект' })).toBeVisible();
-  await expect(examples.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
-  await expect(examples.getByRole('heading', { name: 'Профиль', exact: true })).toBeVisible();
+  await expect(examples.getByRole('heading', { level: 3 })).toHaveText([
+    'Storefront · демопроект',
+    'Spring Petclinic',
+    'Conduit / RealWorld',
+    'Fullstack Todo',
+    "Stan's Robot Shop",
+    'React + Express + MongoDB',
+  ]);
   await page.getByRole('link', { name: 'Новый проект', exact: true }).click();
   await page.getByLabel('Название проекта').fill('Серверный проект');
   await page.getByLabel('Адрес приложения').fill('https://shop.example.test');
@@ -128,8 +133,11 @@ test('live Storefront runs save private S3 screenshots and can be compared after
       .first(),
   ).toBeVisible();
   await page.getByRole('link', { name: 'Все проекты' }).click();
-  await page.getByRole('button', { name: 'Открыть «Корзина»' }).click();
-  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Открыть «Spring Petclinic»' }).click();
+  await expect(page.getByRole('heading', { name: 'Spring Petclinic', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Построить граф', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Граф приложения' })).toContainText('/checkout');
+  const graph = page.getByRole('region', { name: 'Граф приложения' });
+  await expect(
+    graph.locator('path.observed title').filter({ hasText: 'GET /api/vets' }),
+  ).toHaveCount(1);
 });

@@ -5,12 +5,13 @@ import { spawnSync } from 'node:child_process';
 import { resolve, extname } from 'node:path';
 import { createHash } from 'node:crypto';
 
-const prefix = (process.env.SITE_BASE_PATH ?? '/').replace(/\/?$/, '/');
+const workspace = process.argv.includes('--workspace');
+const prefix = (workspace ? '/' : (process.env.SITE_BASE_PATH ?? '/')).replace(/\/?$/, '/');
 if (!/^[/a-zA-Z0-9_.-]+$/.test(prefix) || !prefix.startsWith('/'))
   throw new Error('Invalid SITE_BASE_PATH');
 const source = resolve('examples/open-source/sources');
-const staging = resolve('examples/open-source/.runtime/pages');
-const output = resolve('examples/open-source/.runtime/dist');
+const staging = resolve('examples/open-source/.runtime', workspace ? 'workspace-build' : 'pages');
+const output = resolve('examples/open-source/.runtime', workspace ? 'workspace' : 'dist');
 const run = (command, args, cwd, env = {}) => {
   const result = spawnSync(command, args, {
     cwd,
@@ -66,19 +67,23 @@ async function publish(id, from) {
     }
     await writeFile(resolve(dest, 'index.html'), html);
   }
-  // Preserve upstream scripts, but wait for the local API service worker before starting them.
-  await edit(resolve(dest, 'index.html'), (html) => {
-    const delayed = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (tag, attrs, body) => {
-      const type = attrs.match(/\btype=["']([^"']+)["']/i)?.[1] ?? '';
-      if (type && !['module', 'text/javascript', 'application/javascript'].includes(type))
-        return tag;
-      return `<script type="application/x-faultview" data-original-type="${type}"${attrs.replace(/\btype=["'][^"']*["']/i, '').replace(/\bsrc=/i, 'data-original-src=')}>${body}</script>`;
+  // The private workspace has an HTTP API. Pages must start its service worker first.
+  if (!workspace)
+    await edit(resolve(dest, 'index.html'), (html) => {
+      const delayed = html.replace(
+        /<script\b([^>]*)>([\s\S]*?)<\/script>/gi,
+        (tag, attrs, body) => {
+          const type = attrs.match(/\btype=["']([^"']+)["']/i)?.[1] ?? '';
+          if (type && !['module', 'text/javascript', 'application/javascript'].includes(type))
+            return tag;
+          return `<script type="application/x-faultview" data-original-type="${type}"${attrs.replace(/\btype=["'][^"']*["']/i, '').replace(/\bsrc=/i, 'data-original-src=')}>${body}</script>`;
+        },
+      );
+      return delayed.replace(
+        '</body>',
+        `<script type="module" src="${prefix}examples/runtime/bootstrap.js"></script></body>`,
+      );
     });
-    return delayed.replace(
-      '</body>',
-      `<script type="module" src="${prefix}examples/runtime/bootstrap.js"></script></body>`,
-    );
-  });
   console.log(`Original ${id}: ${dest}`);
 }
 
@@ -129,6 +134,10 @@ run(
 await publish('petclinic', resolve(petclinic, 'dist/browser'));
 
 const conduit = await copy('conduit');
+if (workspace)
+  await edit(resolve(conduit, 'frontend/src/services/getTags.js'), (s) =>
+    s.replace('"/api/tags"', `"${base('conduit')}api/tags"`),
+  );
 try {
   await access(resolve(source, 'conduit/frontend/node_modules'));
   await symlink(
@@ -167,7 +176,8 @@ for (const [id, root] of [
         .replace(/\s+integrity="[^"]*"/, '')
         .replace(/\s+crossorigin="[^"]*"/, ''),
     );
-  }
+  } else if (workspace)
+    await edit(resolve(app, 'src/App.js'), (s) => s.replaceAll('"/api', `"${base(id)}api`));
   run('npm', ['run', 'build'], app, {
     PUBLIC_URL: base(id).replace(/\/$/, ''),
     CI: 'false',
@@ -180,13 +190,15 @@ for (const [id, root] of [
 const robot = resolve(staging, 'robot-shop');
 await rm(robot, { recursive: true, force: true });
 await cp(resolve(source, 'robot-shop/web/static'), robot, { recursive: true });
-await edit(resolve(robot, 'index.html'), (s) =>
-  s.replace('ng-app="robotshop"', 'data-upstream-app="robotshop"'),
-);
+if (!workspace)
+  await edit(resolve(robot, 'index.html'), (s) =>
+    s.replace('ng-app="robotshop"', 'data-upstream-app="robotshop"'),
+  );
 for (const path of await files(robot))
   if (['.html', '.css', '.js'].includes(extname(path)))
     await edit(path, (s) =>
       s
+        .replace(/(['"])\/api\//g, `$1${workspace ? base('robot-shop') : '/'}api/`)
         .replaceAll(
           '$locationProvider.html5Mode(true)',
           "$locationProvider.html5Mode(false).hashPrefix('')",

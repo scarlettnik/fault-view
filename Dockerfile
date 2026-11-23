@@ -23,6 +23,7 @@ RUN npm --prefix apps/backend ci --omit=dev \
     && ln -s apps/backend/node_modules node_modules
 COPY apps/backend/src/ apps/backend/src/
 COPY apps/frontend/src/core/ apps/frontend/src/core/
+COPY examples/projects.json examples/projects.json
 COPY examples/storefront/openapi.json examples/storefront/openapi.json
 COPY --from=spa /srv/faultview/apps/frontend/dist/ /srv/faultview/public/
 ENV NODE_ENV=production FAULTVIEW_HOST=0.0.0.0 FAULTVIEW_SPA_DIST=/srv/faultview/public
@@ -31,8 +32,16 @@ EXPOSE 3001
 CMD ["node", "--import", "tsx", "src/server.ts"]
 WORKDIR /srv/faultview/apps/backend
 
+FROM base AS demo-assets
+COPY examples/ examples/
+RUN node examples/tooling/build.mjs --workspace
+
 FROM base AS demo
+COPY examples/package.json examples/package.json
+COPY examples/projects.json examples/projects.json
+COPY examples/pages/api.js examples/pages/api.js
 COPY examples/storefront/ examples/storefront/
+COPY --from=demo-assets /srv/faultview/examples/open-source/.runtime/workspace/ examples/open-source/.runtime/workspace/
 ENV NODE_ENV=production FAULTVIEW_DEMO_HOST=0.0.0.0
 USER node
 EXPOSE 4400

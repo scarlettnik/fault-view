@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { serve } from './serve.mjs';
 
@@ -35,6 +36,18 @@ const env = {
 };
 if (all) {
   const build = spawnSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit', env });
+  if (build.status !== 0) process.exit(build.status ?? 1);
+}
+if (
+  fullstack &&
+  !process.env.FAULTVIEW_DEMO_URL &&
+  !existsSync(new URL('../examples/open-source/.runtime/workspace/projects.json', import.meta.url))
+) {
+  const build = spawnSync('npm', ['run', 'build:workspace-examples'], {
+    cwd: root,
+    stdio: 'inherit',
+    env,
+  });
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
 const children = [];

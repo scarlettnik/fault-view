@@ -173,17 +173,17 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   const choices = (await app.inject('/api/v1/capabilities')).json().examples;
   assert.deepEqual(
     choices.map((example: { id: string }) => example.id),
-    ['storefront', 'checkout', 'account'],
+    ['storefront', 'petclinic', 'conduit', 'todo', 'robot-shop', 'react-express-mongodb'],
   );
-  const checkout = await call('POST', base + '/demo', { exampleId: 'checkout' }, session);
-  assert.equal(checkout.statusCode, 201);
-  assert.equal(checkout.json().frontendUrl, 'https://demo.example/checkout');
-  assert.notEqual(checkout.json().id, demo.json().id);
-  const reopened = await call('POST', base + '/demo', { exampleId: 'checkout' }, session);
+  const petclinic = await call('POST', base + '/demo', { exampleId: 'petclinic' }, session);
+  assert.equal(petclinic.statusCode, 201);
+  assert.equal(petclinic.json().frontendUrl, 'https://demo.example/examples/petclinic/');
+  assert.notEqual(petclinic.json().id, demo.json().id);
+  const reopened = await call('POST', base + '/demo', { exampleId: 'petclinic' }, session);
   assert.equal(reopened.statusCode, 200);
-  assert.equal(reopened.json().id, checkout.json().id);
+  assert.equal(reopened.json().id, petclinic.json().id);
   assert.equal(
-    (await call('GET', base + '/' + checkout.json().id, undefined, other)).statusCode,
+    (await call('GET', base + '/' + petclinic.json().id, undefined, other)).statusCode,
     404,
   );
   assert.equal(
@@ -196,7 +196,7 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
         'POST',
         base + '/demo',
         {
-          exampleId: 'checkout',
+          exampleId: 'petclinic',
           frontendUrl: 'https://elsewhere.test',
         },
         session,

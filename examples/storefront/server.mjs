@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
+import { serveExample } from './catalogue.mjs';
 
 const spec = readFileSync(new URL('./openapi.json', import.meta.url), 'utf8');
 const client = readFileSync(new URL('./storefront.js', import.meta.url), 'utf8');
@@ -15,8 +16,17 @@ const data = {
   '/api/profile': { name: 'Alex Morgan', email: 'alex@example.test', orders: 3 },
 };
 const server = createServer((req, res) => {
-  const path = new URL(req.url, 'http://127.0.0.1:4400').pathname;
-  if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
+  let url;
+  try {
+    url = new URL(req.url, 'http://127.0.0.1:4400');
+  } catch {
+    res.writeHead(400).end('Invalid URL');
+    return;
+  }
+  const path = url.pathname;
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end(); return; }
+  if (path.startsWith('/examples/')) { void serveExample(url, res); return; }
   if (path === '/openapi.json') { res.setHeader('Content-Type', 'application/json'); res.end(spec); return; }
   if (path === '/storefront.js') { res.setHeader('Content-Type', 'text/javascript'); res.end(client); return; }
   if (Object.hasOwn(data, path)) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data[path])); return; }
