@@ -8,7 +8,8 @@ import type { Pool } from 'pg';
 import { ZodError } from 'zod';
 import { InputError } from '../types.js';
 import { createAuth } from './auth.js';
-import { registerProjects, type Settings } from './projects.js';
+import { registerProjects } from './projects.js';
+import type { DemoProject } from './demo.js';
 import { WorkspaceExecutions, type ExecutionConfig } from './executions.js';
 import { registerExecutionRoutes } from './execution-routes.js';
 
@@ -16,7 +17,7 @@ export interface WorkspaceConfig {
   pool: Pool;
   clientOrigins: string[];
   secureCookies: boolean;
-  demo?: Settings;
+  demos?: DemoProject[];
   execution?: ExecutionConfig;
   spaDirectory?: string;
   trustOneProxy?: boolean;
@@ -119,14 +120,20 @@ export async function createWorkspaceApp(config: WorkspaceConfig) {
   }
   const auth = createAuth(config.pool, config.secureCookies);
   auth.register(app);
-  registerProjects(app, config.pool, auth, config.demo);
+  const demos = config.demos ?? [];
+  registerProjects(app, config.pool, auth, demos);
   const execution = new WorkspaceExecutions(
     config.pool,
     config.execution ?? { demoOnly: true, targetOrigins: [] },
   );
   registerExecutionRoutes(app, config.pool, auth, execution);
   app.get('/api/v1/capabilities', () => ({
-    demo: !!config.demo,
+    demo: demos.length > 0,
+    examples: demos.map(({ id, settings }) => ({
+      id,
+      name: settings.name,
+      description: settings.description,
+    })),
     demoOnly: config.execution?.demoOnly ?? true,
   }));
   app.addHook('onClose', () => execution.close());

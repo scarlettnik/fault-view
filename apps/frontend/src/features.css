@@ -731,9 +731,16 @@
   flex-direction: column;
   gap: 14px;
 }
-.examples-list h2 {
+.examples-list h2,
+.examples-list h3 {
   margin: 0;
   font-size: 16px;
+}
+.account-examples {
+  margin-top: 24px;
+}
+.account-examples .button {
+  margin-top: auto;
 }
 .examples-list .button {
   white-space: normal;

@@ -37,12 +37,14 @@ const app = await (async () => {
   }
   try {
     await migrate(pool);
-    const demo = await loadDemo(process.env.FAULTVIEW_DEMO_URL);
-    const targetOrigins = demo ? [new URL(demo.frontendUrl).origin] : [];
+    const demos = await loadDemo(process.env.FAULTVIEW_DEMO_URL);
+    const targetOrigins = [
+      ...new Set(demos.map(({ settings }) => new URL(settings.frontendUrl).origin)),
+    ];
     if (!production && process.env.FAULTVIEW_TARGET_ORIGINS)
       targetOrigins.push(...origins(process.env.FAULTVIEW_TARGET_ORIGINS));
     const storage = createScreenshotStorage(process.env);
-    if (production && demo && !storage)
+    if (production && demos.length && !storage)
       throw new Error('Configure private S3 storage to enable public demo runs.');
     return await createWorkspaceApp({
       pool,
@@ -50,7 +52,7 @@ const app = await (async () => {
       secureCookies: production,
       spaDirectory: process.env.FAULTVIEW_SPA_DIST,
       trustOneProxy: process.env.FAULTVIEW_TRUST_PROXY === '1',
-      demo,
+      demos,
       execution: {
         demoOnly: production,
         targetOrigins,

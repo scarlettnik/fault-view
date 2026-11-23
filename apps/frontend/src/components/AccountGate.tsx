@@ -1,7 +1,9 @@
-import { useEffect, useState, type SubmitEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type SubmitEvent, type ReactNode } from 'react';
+import { z } from 'zod';
 import { useAppDispatch, useAppSelector } from '../store';
 import { authenticate, checkSession, loadCapabilities } from '../store/server';
 import { messageFor } from '../core/model';
+import { accountCredentialsSchema, type AccountCredentials } from '../core/account';
 import { Button } from './Button';
 import { Busy, Notice, PageHeading } from './ui';
 
@@ -38,13 +40,24 @@ function AccountForm() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fields, setFields] = useState<Partial<Record<keyof AccountCredentials, string>>>({});
+  const emailInput = useRef<HTMLInputElement>(null);
+  const passwordInput = useRef<HTMLInputElement>(null);
   const login = mode === 'login';
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError('');
+    const parsed = accountCredentialsSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const { fieldErrors } = z.flattenError(parsed.error);
+      setFields({ email: fieldErrors.email?.[0], password: fieldErrors.password?.[0] });
+      (fieldErrors.email ? emailInput : passwordInput).current?.focus();
+      return;
+    }
+    setFields({});
+    setBusy(true);
     try {
-      await dispatch(authenticate(mode, { email, password })).unwrap();
+      await dispatch(authenticate(mode, parsed.data)).unwrap();
     } catch (value) {
       setError(messageFor(value));
     } finally {
@@ -55,32 +68,63 @@ function AccountForm() {
   return (
     <>
       <PageHeading title={login ? 'Вход в FaultView' : 'Создать аккаунт'} />
-      <form className="project-form" onSubmit={(event) => void submit(event)}>
+      <form className="project-form" onSubmit={(event) => void submit(event)} noValidate>
         <div className="field">
           <label htmlFor="account-email">Email</label>
           <input
             id="account-email"
+            ref={emailInput}
             type="email"
             autoComplete="email"
             required
             maxLength={254}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            aria-invalid={!!fields.email}
+            aria-describedby={fields.email ? 'account-email-error' : undefined}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (fields.email) setFields((current) => ({ ...current, email: undefined }));
+            }}
           />
+          {fields.email ? (
+            <span id="account-email-error" className="field-error" role="alert">
+              {fields.email}
+            </span>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="account-password">Пароль</label>
           <input
             id="account-password"
+            ref={passwordInput}
             type="password"
             autoComplete={login ? 'current-password' : 'new-password'}
             required
             minLength={12}
             maxLength={128}
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={!!fields.password}
+            aria-describedby={
+              fields.password
+                ? 'account-password-error'
+                : login
+                  ? undefined
+                  : 'account-password-hint'
+            }
+            onChange={(event) => {
+              setPassword(event.target.value);
+              if (fields.password) setFields((current) => ({ ...current, password: undefined }));
+            }}
           />
-          {login ? null : <p className="muted">Минимум 12 символов.</p>}
+          {fields.password ? (
+            <span id="account-password-error" className="field-error" role="alert">
+              {fields.password}
+            </span>
+          ) : login ? null : (
+            <p id="account-password-hint" className="muted">
+              Минимум 12 символов.
+            </p>
+          )}
         </div>
         {error ? <Notice kind="error">{error}</Notice> : null}
         <div className="row">
@@ -94,6 +138,7 @@ function AccountForm() {
             onClick={() => {
               setMode(login ? 'register' : 'login');
               setPassword('');
+              setFields({});
               setError('');
             }}
           >

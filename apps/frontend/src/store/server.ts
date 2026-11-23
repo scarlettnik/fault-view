@@ -13,9 +13,16 @@ import {
   type UiChecks,
 } from '../core/model';
 import { runComparisonSchema } from '../core/comparison';
+import type { AccountCredentials } from '../core/account';
 
 const userSchema = z.object({ id: z.uuid(), email: z.email() });
-const capabilitiesSchema = z.object({ demo: z.boolean(), demoOnly: z.boolean() });
+const capabilitiesSchema = z.object({
+  demo: z.boolean(),
+  demoOnly: z.boolean(),
+  examples: z
+    .array(z.object({ id: z.string(), name: z.string(), description: z.string() }))
+    .default([]),
+});
 type User = z.infer<typeof userSchema>;
 export interface ServerState {
   user: User | null;
@@ -28,7 +35,6 @@ export interface ServerState {
   listRequest?: string;
 }
 type State = { server: ServerState; workspace: { projects: Project[] } };
-type Credentials = { email: string; password: string };
 type Settings = ProjectInput & { checks?: UiChecks; excludedRouteIds?: string[] };
 const initial = (): ServerState => ({ user: null, auth: 'idle', projects: [], list: 'idle' });
 export const sessionExpired = createAction('server/sessionExpired');
@@ -47,7 +53,7 @@ export const checkSession = thunk(
 
 const signedIn = createAction<User>('server/signedIn');
 
-export function authenticate(mode: 'login' | 'register', credentials: Credentials) {
+export function authenticate(mode: 'login' | 'register', credentials: AccountCredentials) {
   // Keep the password in the thunk closure. Redux actions and DevTools only see the user.
   return thunk('server/authenticate', async (_: void, { dispatch, signal }) => {
     const user = await apiFetch('auth/' + mode, userSchema, {
@@ -112,8 +118,8 @@ export const createProject = thunk('server/createProject', (settings: Settings, 
   workspaceRequest(scope, 'projects', projectSchema, { method: 'POST', body: settings }),
 );
 
-export const openDemo = thunk('server/openDemo', (_: void, scope) =>
-  workspaceRequest(scope, 'projects/demo', projectSchema, { method: 'POST' }),
+export const openDemo = thunk('server/openDemo', (exampleId: string, scope) =>
+  workspaceRequest(scope, 'projects/demo', projectSchema, { method: 'POST', body: { exampleId } }),
 );
 
 export const updateProject = thunk(

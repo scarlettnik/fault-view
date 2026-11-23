@@ -1,15 +1,11 @@
 import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
-import { z } from 'zod';
+import { accountCredentialsSchema } from '../../../frontend/src/core/account.ts';
 import { InputError } from '../types.js';
 import { transaction } from './db.js';
 
 const sessionSeconds = 8 * 60 * 60;
-const credentials = z.strictObject({
-  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
-  password: z.string().min(12, 'Пароль должен содержать не менее 12 символов.').max(128),
-});
 type User = { id: string; email: string };
 const dummySalt = randomBytes(16);
 let pendingPasswordChecks = 0;
@@ -80,7 +76,7 @@ export function createAuth(pool: Pool, secure: boolean) {
   function register(app: FastifyInstance) {
     const rateLimit = { max: 8, timeWindow: '5 minutes' };
     app.post('/api/v1/auth/register', { config: { rateLimit } }, async (request, reply) => {
-      const { email, password } = credentials.parse(request.body);
+      const { email, password } = accountCredentialsSchema.parse(request.body);
       const salt = randomBytes(16);
       const key = await deriveKey(password, salt);
       const { user, token } = await transaction(pool, async (client) => {
@@ -104,7 +100,7 @@ export function createAuth(pool: Pool, secure: boolean) {
         .send(user);
     });
     app.post('/api/v1/auth/login', { config: { rateLimit } }, async (request, reply) => {
-      const { email, password } = credentials.parse(request.body);
+      const { email, password } = accountCredentialsSchema.parse(request.body);
       const { rows } = await pool.query<User & { password_hash: string }>(
         'SELECT id, email, password_hash FROM users WHERE email = $1',
         [email],

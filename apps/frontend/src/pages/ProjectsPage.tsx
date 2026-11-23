@@ -37,6 +37,7 @@ export function ProjectsPage() {
   const localProjects = useAppSelector(selectProjects);
   const remoteProjects = useAppSelector((state) => state.server.projects);
   const { list, listError, capabilities } = useAppSelector((state) => state.server);
+  const examples = capabilities?.examples ?? [];
   const projects: (Project | ProjectSummary)[] = serverMode ? remoteProjects : localProjects;
   const active = useAppSelector((state) => state.workspace.active);
   const activeRun = useAppSelector((state) => state.workspace.activeRun);
@@ -54,7 +55,7 @@ export function ProjectsPage() {
       setPending(true);
       setError('');
       try {
-        const project = await dispatch(openDemo()).unwrap();
+        const project = await dispatch(openDemo(id)).unwrap();
         void navigate('/projects/' + project.id);
       } catch (value) {
         setError(messageFor(value));
@@ -106,7 +107,7 @@ export function ProjectsPage() {
         title="Проекты"
         actions={
           <>
-            {!serverMode || capabilities?.demo ? (
+            {serverMode ? null : (
               <button
                 className="button secondary"
                 disabled={pending}
@@ -114,9 +115,9 @@ export function ProjectsPage() {
                   void openExample();
                 }}
               >
-                {serverMode ? 'Открыть демопроект' : 'Открыть пример'}
+                Открыть пример
               </button>
-            ) : null}
+            )}
             <Link className="button primary" to="/projects/new">
               <PlusIcon size={17} />
               Новый проект
@@ -232,11 +233,35 @@ export function ProjectsPage() {
             </Link>
           }
         >
-          {serverMode && !capabilities?.demo
+          {serverMode && !examples.length
             ? 'Создайте проект и загрузите спецификацию OpenAPI.'
-            : 'Создайте проект с вашей спецификацией или начните с готового Storefront.'}
+            : 'Создайте свой проект или выберите готовый пример.'}
         </EmptyState>
       )}
+      {serverMode && examples.length > 0 ? (
+        <section
+          className="examples-library account-examples"
+          aria-labelledby="account-examples-title"
+        >
+          <h2 id="account-examples-title">Примеры проектов</h2>
+          <div className="examples-list">
+            {examples.map((example) => (
+              <article key={example.id}>
+                <h3>{example.name}</h3>
+                <p className="muted">{example.description}</p>
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={pending}
+                  onClick={() => void openExample(example.id)}
+                >
+                  {example.id === 'storefront' ? 'Открыть демопроект' : `Открыть «${example.name}»`}
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
       {deleting ? (
         <ConfirmDialog
           title={`Удалить ${deleting.name}?`}

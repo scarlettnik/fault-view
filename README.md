@@ -22,7 +22,7 @@ FaultView показывает, как интерфейс реагирует н�
 
 Compose запускает Caddy, Fastify со статической SPA, PostgreSQL, приватный S3 на SeaweedFS и отдельный Storefront. Наружу опубликованы только порты Caddy. PostgreSQL и S3 сохраняют данные в именованных томах. Storefront работает в отдельной сети runner. Роль API в PostgreSQL владеет своей базой и не имеет прав суперпользователя сервера.
 
-После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. Зарегистрируйтесь, нажмите **Открыть демопроект**, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. Для обновления сохраните `.env.production` и тома и загрузите образы нового комплекта и повторите запуск с его Compose-файлом. Для резервного копирования сохраните дамп базы PostgreSQL и снимок тома S3. Команда `down -v` удаляет данные.
+После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. Зарегистрируйтесь, в разделе **Примеры проектов** выберите Storefront, корзину или профиль, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. Для обновления сохраните `.env.production` и тома и загрузите образы нового комплекта и повторите запуск с его Compose-файлом. Для резервного копирования сохраните дамп базы PostgreSQL и снимок тома S3. Команда `down -v` удаляет данные.
 
 ## Локальная разработка
 
@@ -70,19 +70,21 @@ Compose запускает Caddy, Fastify со статической SPA, Postg
 
 Пути в таблице относительны к `/api/v1`. Браузер передаёт cookie сессии, а изменяющие запросы — разрешённый `Origin`. Поля ошибок — `code`, `message` и, для ошибок формы, `fields`.
 
-| Метод и путь                                                                                          | Параметры и ответ                                                                                                                         |
-| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /auth/register`, `POST /auth/login`                                                             | JSON с `email` и `password` (12–128 символов). `201` или `200`, пользователь и cookie.                                                    |
-| `GET /auth/session`, `POST /auth/logout`                                                              | `200` с пользователем, `401` без сессии или `204` после выхода.                                                                           |
-| `GET /projects`, `GET /projects/:projectId`                                                           | `200`, список карточек или один проект с графами, планами и сводкой прогонов.                                                             |
-| `POST /projects`, `POST /projects/demo`                                                               | JSON с `name`, `frontendUrl`, `specification`, `specificationName`, `maxPages`. `201` и проект. Повторное открытие демо возвращает `200`. |
-| `PATCH /projects/:projectId`, `DELETE /projects/:projectId`                                           | Частичное изменение настроек или удаление с ответом `204`.                                                                                |
-| `POST /projects/:projectId/discoveries`, `GET /projects/:projectId/discoveries/:jobId`                | Запуск графа `202`, чтение статуса и графа `200`.                                                                                         |
-| `POST /projects/:projectId/plans/preview`, `POST /projects/:projectId/plans`                          | `discoveryId`, `mode`, `targetId`, `profiles`, `excludedRouteIds`. Предпросмотр `200`, сохранение `201`.                                  |
-| `POST /projects/:projectId/runs`, `GET /projects/:projectId/runs/:runId`                              | Запуск по параметрам плана `202`, статус и отчёт `200`.                                                                                   |
-| `POST /projects/:projectId/runs/:runId/cancel`, `POST /projects/:projectId/discoveries/:jobId/cancel` | Остановить свою операцию, `200` с итоговым состоянием.                                                                                    |
-| `GET /projects/:projectId/runs/compare?baseline=<uuid>&candidate=<uuid>`                              | Сравнение двух завершённых прогонов одного проекта, `200`.                                                                                |
-| `GET /projects/:projectId/runs/:runId/screenshots/:name`                                              | Закрытый JPEG, например `0-final`.                                                                                                        |
+| Метод и путь                                                                                          | Параметры и ответ                                                                                                     |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `POST /auth/register`, `POST /auth/login`                                                             | JSON с `email` и `password` (12–128 символов). `201` или `200`, пользователь и cookie.                                |
+| `GET /auth/session`, `POST /auth/logout`                                                              | `200` с пользователем, `401` без сессии или `204` после выхода.                                                       |
+| `GET /projects`, `GET /projects/:projectId`                                                           | `200`, список карточек или один проект с графами, планами и сводкой прогонов.                                         |
+| `POST /projects`                                                                                      | JSON с `name`, `frontendUrl`, `specification`, `specificationName`, `maxPages`. `201` и проект.                       |
+| `GET /capabilities`                                                                                   | `200`; список готовых примеров в `examples`.                                                                          |
+| `POST /projects/demo`                                                                                 | Необязательный `exampleId`: `storefront`, `checkout` или `account`. `201` при создании, `200` при повторном открытии. |
+| `PATCH /projects/:projectId`, `DELETE /projects/:projectId`                                           | Частичное изменение настроек или удаление с ответом `204`.                                                            |
+| `POST /projects/:projectId/discoveries`, `GET /projects/:projectId/discoveries/:jobId`                | Запуск графа `202`, чтение статуса и графа `200`.                                                                     |
+| `POST /projects/:projectId/plans/preview`, `POST /projects/:projectId/plans`                          | `discoveryId`, `mode`, `targetId`, `profiles`, `excludedRouteIds`. Предпросмотр `200`, сохранение `201`.              |
+| `POST /projects/:projectId/runs`, `GET /projects/:projectId/runs/:runId`                              | Запуск по параметрам плана `202`, статус и отчёт `200`.                                                               |
+| `POST /projects/:projectId/runs/:runId/cancel`, `POST /projects/:projectId/discoveries/:jobId/cancel` | Остановить свою операцию, `200` с итоговым состоянием.                                                                |
+| `GET /projects/:projectId/runs/compare?baseline=<uuid>&candidate=<uuid>`                              | Сравнение двух завершённых прогонов одного проекта, `200`.                                                            |
+| `GET /projects/:projectId/runs/:runId/screenshots/:name`                                              | Закрытый JPEG, например `0-final`.                                                                                    |
 
 Фрагмент ответа при запуске прогона (`202`).
 

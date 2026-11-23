@@ -43,7 +43,7 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
     pool,
     clientOrigins: [origin],
     secureCookies: true,
-    demo: await loadDemo('https://demo.example/'),
+    demos: await loadDemo('https://demo.example/'),
     execution: {
       demoOnly: true,
       targetOrigins: ['https://demo.example'],
@@ -170,6 +170,40 @@ test('PostgreSQL workspace enforces sessions, ownership, validation and REST sem
   assert.equal(demo.statusCode, 201);
   const demoPath = base + '/' + demo.json().id;
   assert.equal((await call('POST', base + '/demo', undefined, session)).json().id, demo.json().id);
+  const choices = (await app.inject('/api/v1/capabilities')).json().examples;
+  assert.deepEqual(
+    choices.map((example: { id: string }) => example.id),
+    ['storefront', 'checkout', 'account'],
+  );
+  const checkout = await call('POST', base + '/demo', { exampleId: 'checkout' }, session);
+  assert.equal(checkout.statusCode, 201);
+  assert.equal(checkout.json().frontendUrl, 'https://demo.example/checkout');
+  assert.notEqual(checkout.json().id, demo.json().id);
+  const reopened = await call('POST', base + '/demo', { exampleId: 'checkout' }, session);
+  assert.equal(reopened.statusCode, 200);
+  assert.equal(reopened.json().id, checkout.json().id);
+  assert.equal(
+    (await call('GET', base + '/' + checkout.json().id, undefined, other)).statusCode,
+    404,
+  );
+  assert.equal(
+    (await call('POST', base + '/demo', { exampleId: 'unknown' }, session)).statusCode,
+    404,
+  );
+  assert.equal(
+    (
+      await call(
+        'POST',
+        base + '/demo',
+        {
+          exampleId: 'checkout',
+          frontendUrl: 'https://elsewhere.test',
+        },
+        session,
+      )
+    ).statusCode,
+    400,
+  );
   assert.equal(
     (await call('PATCH', demoPath, { frontendUrl: 'https://elsewhere.test' }, session)).statusCode,
     409,

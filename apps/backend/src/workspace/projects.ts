@@ -12,6 +12,7 @@ import { parseSpecification } from '../openapi.js';
 import { InputError, notFound } from '../types.js';
 import type { createAuth } from './auth.js';
 import { transaction } from './db.js';
+import type { DemoProject } from './demo.js';
 import { readHistory } from './history.js';
 
 const settingsFields = projectInputSchema
@@ -69,13 +70,13 @@ export async function assertIdle(db: PoolClient, id: string) {
     throw new InputError('Дождитесь завершения проверки или отмените её.', 'PROJECT_BUSY', 409);
 }
 
-async function insertProject(pool: Pool, userId: string, settings: Settings, demo = false) {
+async function insertProject(pool: Pool, userId: string, settings: Settings, demoKey?: string) {
   return transaction(pool, async (client) => {
     await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
-    if (demo) {
+    if (demoKey) {
       const existing = await client.query<ProjectRow>(
-        'SELECT * FROM projects WHERE owner_id = $1 AND is_demo',
-        [userId],
+        'SELECT * FROM projects WHERE owner_id = $1 AND is_demo AND demo_key = $2',
+        [userId, demoKey],
       );
       if (existing.rows[0]) return { row: existing.rows[0], created: false };
     }
@@ -86,8 +87,8 @@ async function insertProject(pool: Pool, userId: string, settings: Settings, dem
     if ((count.rows[0]?.total ?? 0) >= 30)
       throw new InputError('Можно сохранить до 30 проектов.', 'PROJECT_LIMIT', 409);
     const result = await client.query<ProjectRow>(
-      'INSERT INTO projects (id, owner_id, settings, is_demo) VALUES ($1, $2, $3, $4) RETURNING *',
-      [randomUUID(), userId, settings, demo],
+      'INSERT INTO projects (id, owner_id, settings, is_demo, demo_key) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [randomUUID(), userId, settings, Boolean(demoKey), demoKey ?? null],
     );
     return { row: result.rows[0]!, created: true };
   });
@@ -97,7 +98,7 @@ export function registerProjects(
   app: FastifyInstance,
   pool: Pool,
   auth: ReturnType<typeof createAuth>,
-  demo?: Settings,
+  demos: DemoProject[],
 ) {
   const settingsWriteLimit = { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
   app.get('/api/v1/projects', async (request): Promise<ProjectSummary[]> => {
@@ -134,10 +135,15 @@ export function registerProjects(
       .send(await toProject(pool, row));
   });
 
-  app.post('/api/v1/projects/demo', async (request, reply) => {
+  app.post('/api/v1/projects/demo', settingsWriteLimit, async (request, reply) => {
     const user = await auth.requireUser(request);
-    if (!demo) throw new InputError('Демостенд пока недоступен.', 'DEMO_UNAVAILABLE', 503);
-    const { row, created } = await insertProject(pool, user.id, demo, true);
+    if (!demos.length) throw new InputError('Демостенд пока недоступен.', 'DEMO_UNAVAILABLE', 503);
+    const { exampleId } = z
+      .strictObject({ exampleId: z.string().max(40).default('storefront') })
+      .parse(request.body ?? {});
+    const demo = demos.find((example) => example.id === exampleId);
+    if (!demo) throw notFound();
+    const { row, created } = await insertProject(pool, user.id, demo.settings, demo.id);
     return reply
       .header('Location', '/api/v1/projects/' + row.id)
       .code(created ? 201 : 200)

@@ -4,12 +4,21 @@ import { exampleSpecification } from '../src/core/examples';
 
 const password = 'FaultView fullstack test password';
 
-async function register(page: Page) {
+async function register(page: Page, verifyEmailError = false) {
   const email = randomUUID() + '@example.test';
   await page.goto('/');
   await page.getByRole('button', { name: 'Создать аккаунт' }).click();
-  await page.getByLabel('Email').fill(email);
+  const emailInput = page.getByLabel('Email');
+  await emailInput.fill(verifyEmailError ? 'bad-email' : email);
   await page.getByLabel('Пароль').fill(password);
+  if (verifyEmailError) {
+    await page.getByRole('button', { name: 'Зарегистрироваться' }).click();
+    await expect(page.getByRole('alert')).toHaveText('Укажите корректный email.');
+    await expect(emailInput).toBeFocused();
+    await expect(emailInput).toHaveAccessibleDescription('Укажите корректный email.');
+    await emailInput.fill(email);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  }
   await page.getByRole('button', { name: 'Зарегистрироваться' }).click();
   await expect(page.getByRole('heading', { name: 'Проекты', exact: true })).toBeVisible();
   return email;
@@ -19,8 +28,12 @@ test('account CRUD uses the real API and persists in a new browser session', asy
   page,
   browser,
 }) => {
-  const email = await register(page);
+  const email = await register(page, true);
   await expect(page.getByRole('heading', { name: 'Нет проектов' })).toBeVisible();
+  const examples = page.getByRole('region', { name: 'Примеры проектов' });
+  await expect(examples.getByRole('heading', { name: 'Storefront · демопроект' })).toBeVisible();
+  await expect(examples.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
+  await expect(examples.getByRole('heading', { name: 'Профиль', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Новый проект', exact: true }).click();
   await page.getByLabel('Название проекта').fill('Серверный проект');
   await page.getByLabel('Адрес приложения').fill('https://shop.example.test');
@@ -114,4 +127,9 @@ test('live Storefront runs save private S3 screenshots and can be compared after
       .getByText('Healthy', { exact: true })
       .first(),
   ).toBeVisible();
+  await page.getByRole('link', { name: 'Все проекты' }).click();
+  await page.getByRole('button', { name: 'Открыть «Корзина»' }).click();
+  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Построить граф', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Граф приложения' })).toContainText('/checkout');
 });
