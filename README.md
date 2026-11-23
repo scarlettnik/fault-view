@@ -16,24 +16,13 @@ FaultView показывает, как интерфейс реагирует н�
 
 Нужны Linux, Docker Engine с Compose v2 и домен с DNS-записью на публичный IP VPS. Откройте TCP 80/443 для Caddy. Chromium запускается от непривилегированного пользователя с sandbox. Профиль seccomp адаптирован из Playwright 1.65 и разрешает `chroot` с проверкой прав ядром внутри пространства имён Chromium. Ядро VPS должно поддерживать пользовательские пространства имён. [Профиль Playwright 1.65](https://github.com/microsoft/playwright/blob/v1.65.0/utils/docker/seccomp_profile.json)
 
-    git clone https://github.com/scarlettnik/fault-view.git
-    cd fault-view
-    git switch develop
-    npm run prepare:vps -- faultview.example.org
-    docker compose --env-file .env.production up -d --build
-    docker compose --env-file .env.production ps
+Для VPS перенесите готовый архив `dist/faultview-linux-amd64-<коммит>.tar.gz`, распакуйте его и выполните команды из вложенного README. Архив содержит все пять Docker-образов, Compose-файл и конфигурацию запуска. На VPS нужны только Docker и Compose. Команда запуска использует `--no-build --pull never`.
 
-На VPS без Node выполните генератор окружения через Docker.
-
-    docker run --rm --user "$(id -u):$(id -g)" \
-      -v "$PWD:/workspace" -w /workspace node:24.15.0-bookworm-slim \
-      node scripts/prepare-vps-env.mjs faultview.example.org
-
-Замените `faultview.example.org` на ваш домен. Генератор создаёт `.env.production` с разрешениями `0600`, отдельными паролями PostgreSQL и случайными ключами S3. Он сохраняет существующий файл при повторном запуске. Git и Docker build исключают этот файл.
+Чтобы собрать новый архив на машине разработчика, выполните `npm run bundle:docker`. Скрипт собирает версию из текущего коммита Git для Linux x86-64 и сохраняет архив в `dist/`. В комплекте есть генератор `.env.production`, который можно запустить внутри загруженного образа API. Укажите свой домен при запуске генератора. Файл создаётся с разрешениями `0600` и сохраняется при обновлении.
 
 Compose запускает Caddy, Fastify со статической SPA, PostgreSQL, приватный S3 на SeaweedFS и отдельный Storefront. Наружу опубликованы только порты Caddy. PostgreSQL и S3 сохраняют данные в именованных томах. Storefront работает в отдельной сети runner. Роль API в PostgreSQL владеет своей базой и не имеет прав суперпользователя сервера.
 
-После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. Зарегистрируйтесь, нажмите **Открыть демопроект**, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. Для обновления сохраните `.env.production` и тома и повторите `docker compose --env-file .env.production up -d --build`. Для резервного копирования сохраните дамп базы PostgreSQL и снимок тома S3. Команда `down -v` удаляет данные.
+После запуска проверьте `https://<домен>/health`, затем откройте `https://<домен>/app/`. Зарегистрируйтесь, нажмите **Открыть демопроект**, постройте граф, запустите проверки дважды и откройте **История → Сравнить прогоны**. Для обновления сохраните `.env.production` и тома и загрузите образы нового комплекта и повторите запуск с его Compose-файлом. Для резервного копирования сохраните дамп базы PostgreSQL и снимок тома S3. Команда `down -v` удаляет данные.
 
 ## Локальная разработка
 
