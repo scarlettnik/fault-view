@@ -5,13 +5,16 @@ const [domain, ...extra] = process.argv.slice(2);
 if (
   extra.length ||
   !domain ||
-  domain.length > 253 ||
-  !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(domain)
+  (domain !== 'localhost' &&
+    (domain.length > 253 ||
+      !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(
+        domain,
+      )))
 ) {
-  console.error('Usage: npm run prepare:vps -- faultview.example.org');
+  console.error('Usage: node scripts/prepare-vps-env.mjs localhost|faultview.example.org');
   process.exitCode = 1;
 } else {
-  const destination = new URL('../.env.production', import.meta.url);
+  const destination = new URL('../.env', import.meta.url);
   const random = (bytes) => randomBytes(bytes).toString('hex');
   try {
     await writeFile(
@@ -26,10 +29,10 @@ if (
       ].join('\n'),
       { mode: 0o600, flag: 'wx' },
     );
-    console.log('Создан .env.production. Docker Compose читает его через --env-file.');
+    console.log('Создан .env.');
   } catch (error) {
     if (error?.code === 'EEXIST') {
-      console.error('.env.production уже существует. Сохраните текущие ключи и пароль томов.');
+      console.error('.env уже существует. Сохраните текущие ключи и пароль томов.');
       process.exitCode = 1;
     } else throw error;
   }
