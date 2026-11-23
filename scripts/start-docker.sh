@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 root="$PWD"
-host="${1:-localhost}"
+requested_host="${1:-}"
 release=docker-v1
 bundle="$root/dist/$release"
 url="https://github.com/scarlettnik/fault-view/releases/download/$release"
@@ -39,10 +39,15 @@ fi
 if [[ ! -f .env ]]; then
   docker run --rm --network none --pull never --user "$(id -u):$(id -g)" \
     -v "$root:/project" -w /project --entrypoint node "$app_image" \
-    scripts/prepare-vps-env.mjs "$host"
+    scripts/prepare-vps-env.mjs "${requested_host:-localhost}"
 fi
 
 compose=(docker compose --env-file "$root/.env" -f "$bundle/compose.json")
+host=$("${compose[@]}" config --environment | sed -n 's/^FAULTVIEW_PUBLIC_HOST=//p')
+if [[ -n $requested_host && ${requested_host,,} != "$host" ]]; then
+  echo 'Указанный домен отличается от FAULTVIEW_PUBLIC_HOST в .env. Обновите это поле и повторите запуск.' >&2
+  exit 1
+fi
 if [[ $host == localhost ]]; then
   compose+=(-p faultview-local -f "$root/deploy/compose.local.yaml")
 else
