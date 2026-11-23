@@ -54,7 +54,6 @@ async function publish(id, from) {
   await rm(dest, { recursive: true, force: true });
   await cp(from, dest, { recursive: true });
   if (id === 'conduit' || id === 'robot-shop') {
-    // Mirror the original external fonts and icon CSS so demos do not depend on a CDN at runtime.
     let html = await readFile(resolve(dest, 'index.html'), 'utf8');
     const expressions =
       id === 'conduit'
@@ -67,7 +66,6 @@ async function publish(id, from) {
     }
     await writeFile(resolve(dest, 'index.html'), html);
   }
-  // The private workspace has an HTTP API. Pages must start its service worker first.
   if (!workspace)
     await edit(resolve(dest, 'index.html'), (html) => {
       const delayed = html.replace(
@@ -90,11 +88,8 @@ async function publish(id, from) {
 async function downloadAsset(url) {
   const digest = createHash('sha256').update(url).digest('hex').slice(0, 20);
   const cached = resolve('examples/open-source/.runtime/vendor', digest);
-  try {
-    return { digest, bytes: await readFile(cached) };
-  } catch {
-    /* First build downloads the original CDN asset. */
-  }
+  const cachedBytes = await readFile(cached).catch(() => undefined);
+  if (cachedBytes) return { digest, bytes: cachedBytes };
   const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new Error(`Original asset ${url}: HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
@@ -233,7 +228,6 @@ for (const name of ['angular', 'angular-route']) {
 }
 await publish('robot-shop', robot);
 
-// Export the original Storefront template and client; only its hosting paths change.
 const storefront = resolve(staging, 'storefront');
 await mkdir(storefront, { recursive: true });
 const server = await readFile('examples/storefront/server.mjs', 'utf8');
@@ -261,7 +255,6 @@ await cp('examples/pages/sw.js', resolve(output, 'sw.js'));
 const catalogue = await readFile(resolve(source, 'robot-shop/mongo/catalogue.js'), 'utf8');
 const rawProducts = catalogue.match(/insertMany\((\[[\s\S]*?\])\);/)?.[1];
 if (!rawProducts) throw new Error('Original Robot Shop seed data not found');
-// Convert the upstream JS object literal to JSON in an isolated build-time VM.
 const { runInNewContext } = await import('node:vm');
 await writeFile(
   resolve(runtime, 'robot-products.json'),

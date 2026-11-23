@@ -56,7 +56,6 @@
           { duration: 280, distance: 3, fromOpacity: 0.82 },
         ]);
       }
-      // Outgoing layers are already hidden. Animate only the new content, never the frame.
       faultAnimations = cues
         .map(([element, options]) => animateIn(element, options))
         .filter(Boolean);
@@ -165,7 +164,6 @@
       lastFaultKey = key;
       document.querySelector('[data-fault-endpoint]').textContent = `GET ${result.route.target}`;
       document.querySelector('[data-scene-profile]').textContent = profile.label;
-      // Keep the browser frame mounted and opaque; only its inner layers transition.
       faultApp.dataset.verdict = verdict;
       faultApp.dataset.profile = profile.id;
       faultContent.setAttribute('aria-hidden', String(verdict === 'fail'));
@@ -235,7 +233,6 @@
         return;
       }
       const anchor = activationY();
-      // Read today's geometry once, never replay the order of old observer entries.
       const tops = chapters.map((chapter) => chapter.getBoundingClientRect().top);
       let next = 0;
       for (let index = 1; index < tops.length; index++) {
@@ -247,7 +244,6 @@
       const current = chapters.findIndex(
         (chapter) => chapter.dataset.profileChapter === faultApp.dataset.profile,
       );
-      // The small boundary margin absorbs trackpad jitter in both directions.
       if (next > current && tops[current + 1] > anchor - 16) {
         return;
       }
@@ -270,7 +266,6 @@
         return;
       }
       const anchor = activationY();
-      // A narrow, fixed activation band gives each chapter one stable boundary.
       // IntersectionObserver only wakes the controller; its queued ratios are ignored.
       chapterObserver = new window.IntersectionObserver(scheduleChapterSync, {
         rootMargin: `${-(anchor - 24)}px 0px ${-(window.innerHeight - anchor - 24)}px 0px`,

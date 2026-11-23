@@ -127,7 +127,6 @@ export class WorkspaceExecutions {
     this.worker = undefined;
     if (worker) {
       worker.off('error', this.workerLost);
-      // End the dedicated session so PostgreSQL releases the advisory lock.
       worker.release(true);
     }
     this.config.storage?.close();

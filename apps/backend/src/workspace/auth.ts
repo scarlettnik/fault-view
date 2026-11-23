@@ -56,7 +56,6 @@ export function createAuth(pool: Pool, secure: boolean) {
 
   async function createSession(client: PoolClient, user: User, request: FastifyRequest) {
     const oldToken = tokenOf(request);
-    // Cap active sessions per user and serialize concurrent logins for the same user.
     await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [user.id]);
     await client.query('DELETE FROM sessions WHERE expires_at <= now() OR token_hash = $1', [
       oldToken ?? null,

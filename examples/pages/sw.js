@@ -119,7 +119,6 @@ self.addEventListener('fetch', (event) => {
             fault === 'http500' ? 500 : 503,
           );
         if (fault === 'timeout') {
-          // Bound the simulated timeout; do not leave pending requests forever.
           await new Promise((resolve) => setTimeout(resolve, 5000));
           return json({ error: 'Demo timeout' }, 504);
         }

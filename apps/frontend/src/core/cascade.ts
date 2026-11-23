@@ -49,8 +49,6 @@ export function buildPlan(graph: DependencyGraph, input: PlanInput) {
     return visited;
   };
 
-  // Route mode follows declared operation links. Endpoint mode follows them backwards
-  // to find entry operations/pages potentially affected by the selected operation.
   const linked =
     input.mode === 'route'
       ? reach(

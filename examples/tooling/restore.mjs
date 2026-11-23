@@ -8,13 +8,10 @@ const manifest = JSON.parse(await readFile('examples/open-source/manifest.json',
 for (const component of manifest.components) {
   const directory = `examples/open-source/sources/${component.id}`;
   const marker = join(directory, '.upstream-revision');
-  try {
-    if ((await readFile(marker, 'utf8')).trim() === component.revision) {
-      console.log(`${component.id}: ${component.revision.slice(0, 12)} already restored`);
-      continue;
-    }
-  } catch {
-    /* A missing marker requires restoring the pinned archive. */
+  const restoredRevision = await readFile(marker, 'utf8').catch(() => '');
+  if (restoredRevision.trim() === component.revision) {
+    console.log(`${component.id}: ${component.revision.slice(0, 12)} already restored`);
+    continue;
   }
   await mkdir(directory, { recursive: true });
   const archive = `/tmp/faultview-upstream-${component.id}-${component.revision}.tar.gz`;

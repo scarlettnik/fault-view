@@ -1,4 +1,3 @@
-/* Live terminal: a quiet idle scene, then sequential rows and a progress sweep. */
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 41fr) minmax(0, 59fr);
