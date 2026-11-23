@@ -59,7 +59,9 @@ Compose запускает Caddy, Fastify со статической SPA, Postg
     nvm use
     npm run setup
     cp .env.dev.example .env.dev
-    # Укажите в .env.dev DSN PostgreSQL, endpoint и ключи S3.
+
+В `.env.dev` укажите DSN PostgreSQL, адрес и ключи S3 перед запуском приложения.
+
     set -a
     . ./.env.dev
     set +a
@@ -75,7 +77,8 @@ Compose запускает Caddy, Fastify со статической SPA, Postg
 | `FAULTVIEW_DEMO_URL`, `FAULTVIEW_TARGET_ORIGINS`                          | Origin доверенного демостенда и дополнительные локальные цели проверки.          |
 | `FAULTVIEW_S3_BUCKET`, `FAULTVIEW_S3_ENDPOINT`, `FAULTVIEW_S3_PATH_STYLE` | Бакет, S3-адрес и настройка адресации. Для внешнего S3 в production нужен HTTPS. |
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`                | Регион и данные подключения к S3.                                                |
-| `VITE_API_URL`, `VITE_BASE_PATH`                                          | Адрес API и базовый путь SPA. Docker строит SPA с `/api/v1` и `/app/`.           |
+| `VITE_API_URL`, `VITE_BASE_PATH`                                          | Адрес API и базовый путь при отдельном запуске SPA.                              |
+| `SITE_BASE_PATH`                                                          | Префикс статической сборки, например `/fault-view/` для GitHub Pages.            |
 | `TEST_DATABASE_URL`, `FAULTVIEW_S3_TEST_BUCKET`                           | Изолированные ресурсы для тестов.                                                |
 
 ## Архитектура и данные
